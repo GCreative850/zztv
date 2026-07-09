@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#050505" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="ZZTV" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>ZZTV Auto Sports Studio</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="phone-shell">
+    <header class="hero-card">
+      <div class="brand-row">
+        <div class="logo-mark">ZZ</div>
+        <div>
+          <p class="eyebrow">Kids Sports Auto Studio</p>
+          <h1>ZZTV</h1>
+        </div>
+      </div>
+      <p class="hero-copy">Tap once to generate a safe sports video package for YouTube Shorts and TikTok: idea, script, voice direction, sound plan, captions, hashtags, thumbnail prompt, upload checklist, and schedule slot.</p>
+      <div class="status-strip" aria-live="polite">
+        <span class="pulse"></span>
+        <span id="runtimeStatus">Ready. Live browser app loaded.</span>
+      </div>
+      <button id="startBtn" class="start-btn" type="button">START ZZTV</button>
+      <div class="mode-grid" aria-label="ZZTV mode status">
+        <div class="mode-card"><strong>Mode</strong><span id="modeLabel">Safe Creator</span></div>
+        <div class="mode-card"><strong>Upload</strong><span>Private-first plan</span></div>
+        <div class="mode-card"><strong>Platform</strong><span>YouTube + TikTok</span></div>
+        <div class="mode-card"><strong>Rights</strong><span>Original only</span></div>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Self-Test + Run Log</h2>
+        <button id="clearBtn" type="button" class="ghost-btn">Clear</button>
+      </div>
+      <pre id="log" class="log-box">Waiting for START ZZTV...</pre>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Generated Package</h2>
+        <span id="packageState" class="badge">Empty</span>
+      </div>
+      <div id="output" class="output-box">No package generated yet.</div>
+      <div class="button-row">
+        <button id="copyBtn" type="button" class="secondary-btn">Copy Package</button>
+        <button id="downloadBtn" type="button" class="secondary-btn">Download JSON</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Production Gates</h2>
+      <ul class="gate-list">
+        <li><span class="gate good"></span> Phone button and browser app</li>
+        <li><span class="gate good"></span> Safe content-package generator</li>
+        <li><span class="gate warn"></span> Real AI video rendering needs backend worker</li>
+        <li><span class="gate warn"></span> YouTube/TikTok uploads need OAuth backend</li>
+      </ul>
+      <p class="small-note">API keys are intentionally not stored in this browser app. Browser keys can be stolen. The next release should add a private backend for real uploading.</p>
+    </section>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
