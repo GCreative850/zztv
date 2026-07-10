@@ -3,11 +3,21 @@ import { google } from 'googleapis';
 import { handleOptions, missingEnv, readJson, requireMethod, setCors } from '../_utils.js';
 
 function parseDataUrl(dataUrl) {
-  const match = String(dataUrl || '').match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) return null;
+  const raw = String(dataUrl || '');
+  const commaIndex = raw.indexOf(',');
+  if (!raw.startsWith('data:') || commaIndex === -1) return null;
+
+  const meta = raw.slice(5, commaIndex);
+  const payload = raw.slice(commaIndex + 1);
+  const metaParts = meta.split(';').filter(Boolean);
+  const mimeType = metaParts[0] || 'video/mp4';
+  const isBase64 = metaParts.some((part) => part.toLowerCase() === 'base64');
+
+  if (!mimeType.startsWith('video/') || !isBase64 || !payload) return null;
+
   return {
-    mimeType: match[1],
-    buffer: Buffer.from(match[2], 'base64')
+    mimeType,
+    buffer: Buffer.from(payload, 'base64')
   };
 }
 
@@ -30,7 +40,10 @@ export default async function handler(req, res) {
   const parsed = parseDataUrl(body.dataUrl);
 
   if (!parsed) {
-    return res.status(400).json({ ok: false, error: 'dataUrl is required and must be a base64 video data URL.' });
+    return res.status(400).json({
+      ok: false,
+      error: 'dataUrl is required and must be a base64 video data URL, including codec parameters if the browser adds them.'
+    });
   }
 
   if (parsed.buffer.length > 45 * 1024 * 1024) {
