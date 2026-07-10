@@ -113,6 +113,18 @@ h2 { font-size: 18px; color: var(--gold); }
   font-size: 13px;
   font-weight: 800;
 }
+.input-label { display: block; margin: 14px 0 8px; color: var(--gold); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.9px; }
+.text-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  padding: 14px 13px;
+  background: rgba(0, 0, 0, 0.42);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+.text-input:focus { border-color: rgba(255, 220, 115, 0.55); box-shadow: 0 0 0 4px rgba(255, 220, 115, 0.08); }
 .log-box, .output-box {
   width: 100%;
   min-height: 210px;
@@ -131,6 +143,7 @@ h2 { font-size: 18px; color: var(--gold); }
 .output-box { font-family: inherit; font-size: 13px; color: #f5e8b7; }
 .badge { padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 800; }
 .badge.ready { color: #031407; background: var(--good); border-color: transparent; }
+.badge.warn { color: #1c1200; background: var(--warn); border-color: transparent; }
 .button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
 .gate-list { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 10px; color: #f4e7b7; font-size: 14px; }
 .gate { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
