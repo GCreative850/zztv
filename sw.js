@@ -1,5 +1,5 @@
-const CACHE_NAME = 'zztv-static-v6';
-const ASSETS = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest'];
+const CACHE_NAME = 'zztv-static-v7';
+const ASSETS = ['./', './index.html', './styles.css', './app-caption.js', './manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
