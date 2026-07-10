@@ -21,14 +21,14 @@
           <h1>ZZTV</h1>
         </div>
       </div>
-      <p class="hero-copy">Tap once to generate a safe sports package for YouTube Shorts and TikTok. Uploads stay private-first for review in YouTube Studio before anything goes public.</p>
+      <p class="hero-copy">Tap once to generate a safe sports package for YouTube Shorts and TikTok. Keep uploads private-first so every video can be reviewed in YouTube Studio before going public.</p>
       <div class="status-strip" aria-live="polite">
         <span class="pulse"></span>
         <span id="runtimeStatus">Ready. Live browser app loaded.</span>
       </div>
       <button id="startBtn" class="start-btn" type="button">START ZZTV</button>
       <div class="mode-grid" aria-label="ZZTV mode status">
-        <div class="mode-card"><strong>Mode</strong><span id="modeLabel">Caption-first</span></div>
+        <div class="mode-card"><strong>Mode</strong><span id="modeLabel">Music Creator</span></div>
         <div class="mode-card"><strong>Upload</strong><span>Private-first only</span></div>
         <div class="mode-card"><strong>Platform</strong><span>YouTube + TikTok</span></div>
         <div class="mode-card"><strong>Rights</strong><span>Original only</span></div>
@@ -48,14 +48,14 @@
         <button id="apiHealthBtn" type="button" class="secondary-btn">Check API</button>
       </div>
       <div class="button-row">
-        <button id="voiceBtn" type="button" class="secondary-btn">Make Voice MP3</button>
+        <button id="voiceBtn" type="button" class="secondary-btn">Music Mode</button>
         <button id="youtubeAuthBtn" type="button" class="secondary-btn">YouTube Auth</button>
       </div>
       <div class="button-row">
-        <button id="uploadTestBtn" type="button" class="secondary-btn">Upload Private Test</button>
-        <button id="fullBuildBtn" type="button" class="secondary-btn">Run Full Private Build</button>
+        <button id="uploadTestBtn" type="button" class="secondary-btn">Upload Music Test</button>
+        <button id="fullBuildBtn" type="button" class="secondary-btn">Run Full Music Build</button>
       </div>
-      <p class="small-note">Full Private Build: generates a package, renders large readable captions, uploads private-only, and returns the YouTube Studio review link. Voice is optional so API quota cannot block releases.</p>
+      <p class="small-note">Full Music Build: generates a package, renders large readable captions, creates an original browser-generated sports beat, uploads private-only, and returns the YouTube Studio review link. Narration is disabled.</p>
     </section>
 
     <section class="panel">
@@ -83,8 +83,8 @@
       <ul class="gate-list">
         <li><span class="gate good"></span> Phone button and browser app</li>
         <li><span class="gate good"></span> Safe content-package generator</li>
+        <li><span class="gate good"></span> Original music-first video renderer</li>
         <li><span class="gate good"></span> YouTube private upload route</li>
-        <li><span class="gate good"></span> Caption-first release mode</li>
         <li><span class="gate warn"></span> TikTok publishing still needs API approval</li>
       </ul>
       <p class="small-note">API keys are intentionally not stored in this browser app. Keys belong in Vercel environment variables only.</p>
