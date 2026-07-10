@@ -37,6 +37,24 @@
 
     <section class="panel">
       <div class="panel-head">
+        <h2>API Backend</h2>
+        <span id="apiState" class="badge">Not checked</span>
+      </div>
+      <p class="small-note">GitHub Pages runs the phone app. Vercel runs the private API. After Vercel deploy, paste the Vercel URL below.</p>
+      <label class="input-label" for="apiBaseInput">Backend URL</label>
+      <input id="apiBaseInput" class="text-input" type="url" placeholder="https://your-zztv.vercel.app" autocomplete="off" />
+      <div class="button-row">
+        <button id="saveApiBtn" type="button" class="secondary-btn">Save API URL</button>
+        <button id="apiHealthBtn" type="button" class="secondary-btn">Check API</button>
+      </div>
+      <div class="button-row">
+        <button id="voiceBtn" type="button" class="secondary-btn">Make Voice MP3</button>
+        <button id="youtubeAuthBtn" type="button" class="secondary-btn">YouTube Auth</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
         <h2>Self-Test + Run Log</h2>
         <button id="clearBtn" type="button" class="ghost-btn">Clear</button>
       </div>
@@ -60,10 +78,10 @@
       <ul class="gate-list">
         <li><span class="gate good"></span> Phone button and browser app</li>
         <li><span class="gate good"></span> Safe content-package generator</li>
-        <li><span class="gate warn"></span> Real AI video rendering needs backend worker</li>
-        <li><span class="gate warn"></span> YouTube/TikTok uploads need OAuth backend</li>
+        <li><span class="gate warn"></span> API routes require Vercel/serverless deployment</li>
+        <li><span class="gate warn"></span> YouTube/TikTok uploads need OAuth backend keys</li>
       </ul>
-      <p class="small-note">API keys are intentionally not stored in this browser app. Browser keys can be stolen. The next release should add a private backend for real uploading.</p>
+      <p class="small-note">API keys are intentionally not stored in this browser app. Browser keys can be stolen. Keys belong in Vercel environment variables only.</p>
     </section>
   </div>
 
