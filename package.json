@@ -1,0 +1,17 @@
+{
+  "name": "zztv-auto-sports-studio",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "check": "node scripts/self-test.js"
+  },
+  "dependencies": {
+    "googleapis": "latest",
+    "openai": "latest"
+  },
+  "devDependencies": {
+    "vercel": "latest"
+  }
+}
