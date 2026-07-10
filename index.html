@@ -21,7 +21,7 @@
           <h1>ZZTV</h1>
         </div>
       </div>
-      <p class="hero-copy">Tap once to generate a safe sports video package for YouTube Shorts and TikTok: idea, script, voice direction, sound plan, captions, hashtags, thumbnail prompt, upload checklist, and schedule slot.</p>
+      <p class="hero-copy">Tap once to generate a safe sports package for YouTube Shorts and TikTok. Keep uploads private-first so every video can be reviewed in YouTube Studio before going public.</p>
       <div class="status-strip" aria-live="polite">
         <span class="pulse"></span>
         <span id="runtimeStatus">Ready. Live browser app loaded.</span>
@@ -29,7 +29,7 @@
       <button id="startBtn" class="start-btn" type="button">START ZZTV</button>
       <div class="mode-grid" aria-label="ZZTV mode status">
         <div class="mode-card"><strong>Mode</strong><span id="modeLabel">Safe Creator</span></div>
-        <div class="mode-card"><strong>Upload</strong><span>Private-first plan</span></div>
+        <div class="mode-card"><strong>Upload</strong><span>Private-first only</span></div>
         <div class="mode-card"><strong>Platform</strong><span>YouTube + TikTok</span></div>
         <div class="mode-card"><strong>Rights</strong><span>Original only</span></div>
       </div>
@@ -40,9 +40,9 @@
         <h2>API Backend</h2>
         <span id="apiState" class="badge">Not checked</span>
       </div>
-      <p class="small-note">GitHub Pages runs the phone app. Vercel runs the private API. After Vercel deploy, paste the Vercel URL below.</p>
+      <p class="small-note">Use this Vercel app as the backend. Leave the box empty for same-site API mode, or paste https://zztv-rho.vercel.app if testing from another host.</p>
       <label class="input-label" for="apiBaseInput">Backend URL</label>
-      <input id="apiBaseInput" class="text-input" type="url" placeholder="https://your-zztv.vercel.app" autocomplete="off" />
+      <input id="apiBaseInput" class="text-input" type="url" placeholder="https://zztv-rho.vercel.app" autocomplete="off" />
       <div class="button-row">
         <button id="saveApiBtn" type="button" class="secondary-btn">Save API URL</button>
         <button id="apiHealthBtn" type="button" class="secondary-btn">Check API</button>
@@ -52,9 +52,10 @@
         <button id="youtubeAuthBtn" type="button" class="secondary-btn">YouTube Auth</button>
       </div>
       <div class="button-row">
-        <button id="uploadTestBtn" type="button" class="secondary-btn" style="grid-column:1/-1">Create Test Video + Upload Private</button>
+        <button id="uploadTestBtn" type="button" class="secondary-btn">Upload Private Test</button>
+        <button id="fullBuildBtn" type="button" class="secondary-btn">Run Full Private Build</button>
       </div>
-      <p class="small-note">The private upload test makes a tiny original ZZTV clip in your browser, sends it to the backend, and uploads it to YouTube as <b>private</b>.</p>
+      <p class="small-note">Full Private Build: generates a package, requests narration, renders an original vertical video, uploads it private-only, and returns the YouTube Studio review link.</p>
     </section>
 
     <section class="panel">
@@ -82,10 +83,10 @@
       <ul class="gate-list">
         <li><span class="gate good"></span> Phone button and browser app</li>
         <li><span class="gate good"></span> Safe content-package generator</li>
-        <li><span class="gate warn"></span> API routes require Vercel/serverless deployment</li>
-        <li><span class="gate warn"></span> YouTube/TikTok uploads need OAuth backend keys</li>
+        <li><span class="gate good"></span> YouTube private upload route</li>
+        <li><span class="gate warn"></span> TikTok publishing still needs API approval</li>
       </ul>
-      <p class="small-note">API keys are intentionally not stored in this browser app. Browser keys can be stolen. Keys belong in Vercel environment variables only.</p>
+      <p class="small-note">API keys are intentionally not stored in this browser app. Keys belong in Vercel environment variables only.</p>
     </section>
   </div>
 
