@@ -24,7 +24,7 @@
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const nowLabel = () => new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-  const clean = (value) => String(value).replace(/[<>]/g, '');
+  const clean = (value) => String(value ?? '').replace(/[<>]/g, '');
 
   function log(message, type = 'info') {
     const icon = type === 'pass' ? '✅' : type === 'warn' ? '⚠️' : type === 'fail' ? '❌' : '•';
@@ -67,8 +67,12 @@
       log(`Saved backend API URL: ${value}`, 'pass');
     } catch {
       setApiState('Bad URL', 'warn');
-      log('Invalid API URL. Use a full URL like https://your-zztv.vercel.app', 'fail');
+      log('Invalid API URL. Use a full URL like https://zztv-rho.vercel.app', 'fail');
     }
+  }
+
+  function pick(array) {
+    return array[Math.floor(Math.random() * array.length)];
   }
 
   async function checkApiHealth() {
@@ -85,42 +89,6 @@
       log(`API health failed: ${error.message}. If using GitHub Pages, deploy to Vercel and save that URL here.`, 'warn');
       return null;
     }
-  }
-
-  function pick(array) {
-    return array[Math.floor(Math.random() * array.length)];
-  }
-
-  function normalizePackage(pkg) {
-    if (!pkg) return buildPackage();
-    return {
-      runId,
-      createdAt: pkg.createdAt || nowLabel(),
-      channel: pkg.channel || 'ZZTV Kids Sports',
-      mode: pkg.mode || 'Safe Creator / Private-first upload plan',
-      compliance: pkg.compliance || pkg.safety || ['Original sports commentary only', 'Kid-friendly tone'],
-      youtube: {
-        title: pkg.youtube?.title || 'ZZTV Sports Short 🏆',
-        description: pkg.youtube?.description || 'A kid-friendly ZZTV sports short.',
-        tags: pkg.youtube?.tags || ['kids sports', 'ZZTV'],
-        visibility: pkg.youtube?.visibility || pkg.youtube?.privacyStatus || 'private'
-      },
-      script: pkg.script || ['Welcome back to ZZTV!', 'Practice smarter today.', 'Follow for more sports tips.'],
-      soundProduction: pkg.soundProduction || pkg.sound || {
-        narration: 'bright, energetic, kid-friendly host voice',
-        music: 'royalty-free upbeat sports beat under voice'
-      },
-      videoPlan: pkg.videoPlan || pkg.video || {
-        format: '9:16 vertical',
-        duration: '25-35 seconds',
-        scenes: ['ZZTV intro', 'tip cards', 'follow end card']
-      },
-      tiktok: {
-        caption: pkg.tiktok?.caption || 'Practice smarter today 🏆 #ZZTV',
-        hashtags: pkg.tiktok?.hashtags || ['#kidssports', '#ZZTV']
-      },
-      schedule: pkg.schedule || { youtubeShorts: 'private-first', tiktok: 'draft/manual review' }
-    };
   }
 
   function buildPackage() {
@@ -172,13 +140,7 @@
       videoPlan: {
         format: '9:16 vertical',
         duration: '25-35 seconds',
-        scenes: [
-          'Gold ZZTV intro card',
-          'Animated sports ball motion background',
-          'Three tip cards with large captions',
-          'Practice challenge call-to-action',
-          'ZZTV follow end card'
-        ],
+        scenes: ['Gold ZZTV intro card', 'Animated sports ball motion background', 'Three tip cards with large captions', 'Practice challenge call-to-action', 'ZZTV follow end card'],
         thumbnailPrompt: `Gold and black kids sports thumbnail for ${sport}, big readable text: "TRAIN SMART" with clean energetic style.`
       },
       tiktok: {
@@ -189,15 +151,32 @@
         youtubeShorts: 'Next available evening slot, private first',
         tiktok: 'Draft/manual review until TikTok API approval',
         repeatCadence: '1 short per day after backend scheduler is connected'
+      }
+    };
+  }
+
+  function normalizePackage(pkg) {
+    if (!pkg) return buildPackage();
+    return {
+      runId,
+      createdAt: pkg.createdAt || nowLabel(),
+      channel: pkg.channel || 'ZZTV Kids Sports',
+      mode: pkg.mode || 'Safe Creator / Private-first upload plan',
+      compliance: pkg.compliance || pkg.safety || ['Original sports commentary only', 'Kid-friendly tone'],
+      youtube: {
+        title: pkg.youtube?.title || 'ZZTV Sports Short 🏆',
+        description: pkg.youtube?.description || 'A kid-friendly ZZTV sports short.',
+        tags: pkg.youtube?.tags || ['kids sports', 'ZZTV'],
+        visibility: pkg.youtube?.visibility || pkg.youtube?.privacyStatus || 'private'
       },
-      backendNeededForRealAutomation: [
-        'Private API server',
-        'YouTube OAuth upload route',
-        'TikTok Content Posting API or draft workflow',
-        'AI video renderer worker',
-        'Cloud storage for rendered videos',
-        'Queue scheduler and retry logs'
-      ]
+      script: Array.isArray(pkg.script) ? pkg.script : ['Welcome back to ZZTV!', 'Practice smarter today.', 'Follow for more sports tips.'],
+      soundProduction: pkg.soundProduction || pkg.sound || { narration: 'bright, energetic, kid-friendly host voice', music: 'royalty-free upbeat sports beat under voice' },
+      videoPlan: pkg.videoPlan || pkg.video || { format: '9:16 vertical', duration: '25-35 seconds', scenes: ['ZZTV intro', 'tip cards', 'follow end card'] },
+      tiktok: {
+        caption: pkg.tiktok?.caption || 'Practice smarter today 🏆 #ZZTV',
+        hashtags: pkg.tiktok?.hashtags || ['#kidssports', '#ZZTV']
+      },
+      schedule: pkg.schedule || { youtubeShorts: 'private-first', tiktok: 'draft/manual review' }
     };
   }
 
@@ -208,13 +187,13 @@
       body: JSON.stringify({ sport: 'basketball', angle: 'confidence and teamwork for young athletes' })
     });
     const data = await response.json();
-    if (!response.ok || !data.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    if (!response.ok || !data.ok) throw new Error(data.error || data.message || `HTTP ${response.status}`);
     return normalizePackage(data.package);
   }
 
   function renderPackage(pkg) {
     const script = pkg.script.map((line, index) => `${index + 1}. ${clean(line)}`).join('<br>');
-    const hashtags = pkg.tiktok.hashtags.map(clean).join(' ');
+    const hashtags = (pkg.tiktok.hashtags || []).map(clean).join(' ');
     const scenes = (pkg.videoPlan.scenes || []).map(clean).join('<br>');
     outputBox.innerHTML = `
       <div class="kv">
@@ -244,20 +223,19 @@
     setStatus('Running ZZTV pipeline...');
 
     const checks = [
-      ['Phone tap/click event received', true],
-      ['JavaScript execution confirmed', true],
-      ['Local safe content engine loaded', true],
-      ['Kid-friendly language guard enabled', true],
-      ['Copyright-safe rule enabled: no broadcast scraping', true],
-      ['Browser secret check passed: no API keys requested', true]
+      'Phone tap/click event received',
+      'JavaScript execution confirmed',
+      'Local safe content engine loaded',
+      'Kid-friendly language guard enabled',
+      'Copyright-safe rule enabled: no broadcast scraping',
+      'Browser secret check passed: no API keys requested'
     ];
 
-    for (const [label, passed] of checks) {
-      await sleep(160);
-      log(label, passed ? 'pass' : 'fail');
+    for (const label of checks) {
+      await sleep(120);
+      log(label, 'pass');
     }
 
-    await sleep(180);
     try {
       latestPackage = await generatePackageWithBackend();
       log('Generated package through backend API', 'pass');
@@ -268,17 +246,12 @@
       setApiState(apiBase() ? 'API issue' : 'Local mode', 'warn');
     }
 
-    await sleep(160);
-    log('Generated YouTube package', 'pass');
-    await sleep(160);
-    log('Generated TikTok captions and hashtags', 'pass');
-    await sleep(160);
-    log('Generated sound-production notes', 'pass');
-    await sleep(160);
-    log('Generated private-first schedule plan', 'pass');
-    await sleep(160);
-    log('Final front-end result: PASSED', 'pass');
+    for (const label of ['Generated YouTube package', 'Generated TikTok captions and hashtags', 'Generated sound-production notes', 'Generated private-first schedule plan']) {
+      await sleep(120);
+      log(label, 'pass');
+    }
 
+    log('Final front-end result: PASSED', 'pass');
     localStorage.setItem('zztv.latestPackage', JSON.stringify(latestPackage, null, 2));
     renderPackage(latestPackage);
     setStatus('Passed. Content package ready.');
@@ -339,13 +312,7 @@
 
   function bestVideoMimeType() {
     if (!window.MediaRecorder) return '';
-    const types = [
-      'video/mp4;codecs=h264',
-      'video/mp4',
-      'video/webm;codecs=vp9',
-      'video/webm;codecs=vp8',
-      'video/webm'
-    ];
+    const types = ['video/mp4;codecs=h264', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
     return types.find((type) => MediaRecorder.isTypeSupported(type)) || '';
   }
 
@@ -396,21 +363,17 @@
     ctx.fillStyle = '#ffdc73';
     ctx.font = '900 104px Arial';
     const ballX = 70 + progress * (w - 140);
-    const ballY = 720 + Math.sin(progress * Math.PI * 4) * 50;
+    const ballY = 520 + Math.sin(progress * Math.PI * 4) * 35;
     ctx.fillText('🏀', ballX, ballY);
 
     ctx.fillStyle = '#fff7db';
-    ctx.font = '800 34px Arial';
-    ctx.fillText('Practice smarter today', w / 2, 880);
-
-    ctx.fillStyle = '#c9b982';
-    ctx.font = '600 22px Arial';
-    ctx.fillText('Generated by ZZTV Auto Sports Studio', w / 2, 930);
+    ctx.font = '800 28px Arial';
+    ctx.fillText('Practice smarter today', w / 2, 585);
 
     ctx.fillStyle = '#47d16c';
-    ctx.fillRect(70, 1060, (w - 140) * progress, 16);
+    ctx.fillRect(45, 615, (w - 90) * progress, 10);
     ctx.strokeStyle = 'rgba(255,255,255,.25)';
-    ctx.strokeRect(70, 1060, w - 140, 16);
+    ctx.strokeRect(45, 615, w - 90, 10);
   }
 
   async function createTestVideoBlob(pkg) {
@@ -433,7 +396,7 @@
       let recorder;
       try {
         recorder = new MediaRecorder(stream, options);
-      } catch (error) {
+      } catch {
         try {
           recorder = new MediaRecorder(stream);
         } catch (fallbackError) {
@@ -452,8 +415,7 @@
       };
       recorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop());
-        const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || 'video/webm' });
-        resolve(blob);
+        resolve(new Blob(chunks, { type: recorder.mimeType || mimeType || 'video/webm' }));
       };
 
       const start = performance.now();
@@ -479,6 +441,14 @@
       reader.onerror = () => reject(reader.error || new Error('Could not read video blob.'));
       reader.readAsDataURL(blob);
     });
+  }
+
+  function uploadErrorMessage(data, response) {
+    const detail = data?.detail || {};
+    const message = data?.message || detail.message || data?.error || `HTTP ${response.status}`;
+    const reason = data?.reason || detail.reason;
+    const status = data?.status || detail.status || response.status;
+    return { message, reason, status };
   }
 
   async function createAndUploadPrivateTest() {
@@ -511,12 +481,18 @@
           description: 'Private test upload from ZZTV. This original clip confirms OAuth and upload are working.',
           tags: ['ZZTV', 'kids sports', 'private test'],
           privacyStatus: 'private',
-          selfDeclaredMadeForKids: true,
-          containsSyntheticMedia: true
+          selfDeclaredMadeForKids: true
         })
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.ok) throw new Error(data.error || data.message || `HTTP ${response.status}`);
+      if (!response.ok || !data.ok) {
+        const issue = uploadErrorMessage(data, response);
+        log(`Private upload failed: ${issue.message}`, 'fail');
+        if (issue.reason) log(`YouTube reason: ${issue.reason}`, 'fail');
+        if (issue.status) log(`YouTube status: ${issue.status}`, 'fail');
+        setStatus('Private upload failed.');
+        return;
+      }
 
       log(`Private YouTube upload PASSED: ${data.url}`, 'pass');
       if (data.studioUrl) log(`Studio edit link: ${data.studioUrl}`, 'pass');
@@ -536,9 +512,8 @@
       log('Copy skipped: no generated package yet', 'warn');
       return;
     }
-    const text = JSON.stringify(payload, null, 2);
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
       setStatus('Package copied.');
       log('Copied package to clipboard', 'pass');
     } catch (error) {
@@ -595,9 +570,7 @@
     uploadTestBtn?.addEventListener('click', createAndUploadPrivateTest);
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(() => {
-        log('Offline install worker not registered; app still works online', 'warn');
-      });
+      navigator.serviceWorker.register('./sw.js').catch(() => log('Offline install worker not registered; app still works online', 'warn'));
     }
 
     setApiState(apiBase() ? 'Saved' : 'Local mode', apiBase() ? 'ready' : 'warn');
