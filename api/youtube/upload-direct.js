@@ -28,8 +28,7 @@ function publicError(error) {
   return {
     message: firstMessage,
     reason: firstReason || null,
-    status: error?.response?.status || error?.code || null,
-    raw: data
+    status: error?.response?.status || error?.code || null
   };
 }
 
@@ -90,8 +89,7 @@ export default async function handler(req, res) {
         },
         status: {
           privacyStatus: 'private',
-          selfDeclaredMadeForKids: body.selfDeclaredMadeForKids ?? true,
-          containsSyntheticMedia: body.containsSyntheticMedia ?? true
+          selfDeclaredMadeForKids: body.selfDeclaredMadeForKids ?? true
         }
       },
       media: {
@@ -115,6 +113,9 @@ export default async function handler(req, res) {
       ok: false,
       privateOnly: true,
       error: 'YouTube private upload failed.',
+      message: detail.message,
+      reason: detail.reason,
+      status: detail.status,
       detail,
       mimeType: parsed.mimeType,
       sizeBytes: parsed.buffer.length
