@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zztv-static-v5';
+const CACHE_NAME = 'zztv-static-v6';
 const ASSETS = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
