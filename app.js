@@ -17,6 +17,7 @@
   const voiceBtn = $('voiceBtn');
   const youtubeAuthBtn = $('youtubeAuthBtn');
   const uploadTestBtn = $('uploadTestBtn');
+  const fullBuildBtn = $('fullBuildBtn');
   const apiState = $('apiState');
 
   let latestPackage = null;
@@ -57,7 +58,7 @@
     if (!value) {
       localStorage.removeItem('zztv.apiBase');
       setApiState('Same-origin', 'warn');
-      log('API URL cleared. The app will try same-origin /api routes.', 'warn');
+      log('API URL cleared. Same-site /api mode enabled.', 'warn');
       return;
     }
     try {
@@ -71,10 +72,6 @@
     }
   }
 
-  function pick(array) {
-    return array[Math.floor(Math.random() * array.length)];
-  }
-
   async function checkApiHealth() {
     try {
       setApiState('Checking', 'warn');
@@ -86,9 +83,13 @@
       return data;
     } catch (error) {
       setApiState('API offline', 'warn');
-      log(`API health failed: ${error.message}. If using GitHub Pages, deploy to Vercel and save that URL here.`, 'warn');
+      log(`API health failed: ${error.message}.`, 'warn');
       return null;
     }
+  }
+
+  function pick(array) {
+    return array[Math.floor(Math.random() * array.length)];
   }
 
   function buildPackage() {
@@ -133,25 +134,19 @@
       ],
       soundProduction: {
         narration: 'bright, energetic, kid-friendly host voice',
-        music: 'royalty-free upbeat sports beat, -18 LUFS under voice',
-        effects: ['soft whistle hit', 'scoreboard ding', 'light crowd cheer'],
-        mixNotes: 'Voice first, music low, no harsh highs, no copyrighted song sample.'
+        music: 'royalty-free upbeat sports beat under voice',
+        mixNotes: 'Voice first, music low, no harsh highs, no copyrighted samples.'
       },
       videoPlan: {
         format: '9:16 vertical',
-        duration: '25-35 seconds',
-        scenes: ['Gold ZZTV intro card', 'Animated sports ball motion background', 'Three tip cards with large captions', 'Practice challenge call-to-action', 'ZZTV follow end card'],
-        thumbnailPrompt: `Gold and black kids sports thumbnail for ${sport}, big readable text: "TRAIN SMART" with clean energetic style.`
+        duration: '10-15 seconds demo render, expandable to 25-35 seconds',
+        scenes: ['Gold ZZTV intro card', 'Animated sports background', 'Three tip cards', 'Practice challenge', 'Studio review end card']
       },
       tiktok: {
         caption: `${shortHook} Practice smarter today 🏆 #ZZTV`,
         hashtags: ['#kidssports', '#youthsports', `#${sport}`, '#sportsmotivation', '#sportstips', '#ZZTV']
       },
-      schedule: {
-        youtubeShorts: 'Next available evening slot, private first',
-        tiktok: 'Draft/manual review until TikTok API approval',
-        repeatCadence: '1 short per day after backend scheduler is connected'
-      }
+      schedule: { youtubeShorts: 'private-first', tiktok: 'draft/manual review' }
     };
   }
 
@@ -197,10 +192,10 @@
     const scenes = (pkg.videoPlan.scenes || []).map(clean).join('<br>');
     outputBox.innerHTML = `
       <div class="kv">
-        <div><b>Status:</b><br>Generated package is ready. Real upload remains locked until backend OAuth is added.</div>
+        <div><b>Status:</b><br>Generated package is ready. Uploads remain private-first.</div>
         <div><b>YouTube Title:</b><br>${clean(pkg.youtube.title)}</div>
         <div><b>Script:</b><br>${script}</div>
-        <div><b>Voice + Sound:</b><br>${clean(pkg.soundProduction.narration || pkg.soundProduction.voice || '')}<br>${clean(pkg.soundProduction.music || '')}</div>
+        <div><b>Voice + Sound:</b><br>${clean(pkg.soundProduction.narration || '')}<br>${clean(pkg.soundProduction.music || '')}</div>
         <div><b>TikTok Caption:</b><br>${clean(pkg.tiktok.caption)}</div>
         <div><b>Hashtags:</b><br>${hashtags}</div>
         <div><b>Video Plan:</b><br>${scenes}</div>
@@ -213,7 +208,6 @@
   async function runZZTV(event) {
     if (event) event.preventDefault();
     if (startBtn.disabled) return;
-
     runId += 1;
     startBtn.disabled = true;
     packageState.textContent = 'Running';
@@ -222,17 +216,8 @@
     outputBox.textContent = 'Generating package...';
     setStatus('Running ZZTV pipeline...');
 
-    const checks = [
-      'Phone tap/click event received',
-      'JavaScript execution confirmed',
-      'Local safe content engine loaded',
-      'Kid-friendly language guard enabled',
-      'Copyright-safe rule enabled: no broadcast scraping',
-      'Browser secret check passed: no API keys requested'
-    ];
-
-    for (const label of checks) {
-      await sleep(120);
+    for (const label of ['Phone tap/click event received', 'JavaScript execution confirmed', 'Local safe content engine loaded', 'Kid-friendly language guard enabled', 'Copyright-safe rule enabled: no broadcast scraping', 'Browser secret check passed: no API keys requested']) {
+      await sleep(100);
       log(label, 'pass');
     }
 
@@ -247,7 +232,7 @@
     }
 
     for (const label of ['Generated YouTube package', 'Generated TikTok captions and hashtags', 'Generated sound-production notes', 'Generated private-first schedule plan']) {
-      await sleep(120);
+      await sleep(100);
       log(label, 'pass');
     }
 
@@ -256,6 +241,21 @@
     renderPackage(latestPackage);
     setStatus('Passed. Content package ready.');
     startBtn.disabled = false;
+  }
+
+  async function fetchVoiceBlob(pkg) {
+    const response = await fetch(apiUrl('/api/tts'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ script: pkg.script, voice: 'coral' })
+    });
+    const type = response.headers.get('content-type') || '';
+    if (type.includes('application/json')) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.warning || data.error || 'Voice route returned JSON instead of MP3');
+    }
+    if (!response.ok) throw new Error(`Voice HTTP ${response.status}`);
+    return response.blob();
   }
 
   async function makeVoice() {
@@ -267,20 +267,7 @@
     }
     try {
       setStatus('Requesting voice MP3...');
-      const response = await fetch(apiUrl('/api/tts'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script: payload.script, voice: 'coral' })
-      });
-      const type = response.headers.get('content-type') || '';
-      if (type.includes('application/json')) {
-        const data = await response.json();
-        log(data.warning || data.error || 'Voice route returned JSON instead of MP3', data.ok ? 'warn' : 'fail');
-        setStatus('Voice API dry-run or error.');
-        return;
-      }
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const blob = await response.blob();
+      const blob = await fetchVoiceBlob(payload);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -312,62 +299,82 @@
 
   function bestVideoMimeType() {
     if (!window.MediaRecorder) return '';
-    const types = ['video/mp4;codecs=h264', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+    const types = ['video/mp4;codecs=h264', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
     return types.find((type) => MediaRecorder.isTypeSupported(type)) || '';
   }
 
-  function drawTestFrame(ctx, canvas, elapsed, durationMs, pkg) {
+  function wrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 3) {
+    const words = clean(text).split(/\s+/);
+    const lines = [];
+    let current = '';
+    for (const word of words) {
+      const next = current ? `${current} ${word}` : word;
+      if (ctx.measureText(next).width > maxWidth && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = next;
+      }
+      if (lines.length >= maxLines) break;
+    }
+    if (current && lines.length < maxLines) lines.push(current);
+    lines.forEach((line, index) => ctx.fillText(line, x, y + index * lineHeight));
+  }
+
+  function drawFrame(ctx, canvas, elapsed, durationMs, pkg, mode = 'production') {
     const progress = Math.min(1, elapsed / durationMs);
     const w = canvas.width;
     const h = canvas.height;
     const pulse = Math.sin(progress * Math.PI * 8) * 0.5 + 0.5;
+    const script = pkg.script || [];
+    const phase = Math.min(script.length - 1, Math.floor(progress * Math.max(1, script.length)));
+    const line = script[phase] || 'Practice smarter today.';
 
     const bg = ctx.createLinearGradient(0, 0, w, h);
     bg.addColorStop(0, '#090909');
-    bg.addColorStop(0.5, '#1f1606');
+    bg.addColorStop(0.45, '#241805');
     bg.addColorStop(1, '#000000');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
 
-    ctx.fillStyle = `rgba(255, 220, 115, ${0.10 + pulse * 0.10})`;
+    ctx.fillStyle = `rgba(255, 220, 115, ${0.12 + pulse * 0.12})`;
     ctx.beginPath();
-    ctx.arc(w * 0.78, h * 0.18, 110 + pulse * 24, 0, Math.PI * 2);
+    ctx.arc(w * 0.78, h * 0.16, 100 + pulse * 28, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffdc73';
-    ctx.font = '900 72px Arial';
-    ctx.fillText('ZZTV', w / 2, 140);
+    ctx.font = '900 68px Arial';
+    ctx.fillText('ZZTV', w / 2, 105);
 
     ctx.fillStyle = '#fff7db';
-    ctx.font = '800 30px Arial';
-    ctx.fillText('PRIVATE TEST UPLOAD', w / 2, 202);
+    ctx.font = '800 21px Arial';
+    ctx.fillText(mode === 'test' ? 'PRIVATE TEST UPLOAD' : 'PRIVATE REVIEW BUILD', w / 2, 146);
 
     ctx.strokeStyle = 'rgba(255,220,115,.45)';
     ctx.lineWidth = 4;
-    ctx.strokeRect(34, 250, w - 68, 300);
+    ctx.strokeRect(26, 184, w - 52, 270);
 
     ctx.fillStyle = '#ffdc73';
-    ctx.font = '800 30px Arial';
-    ctx.fillText('Kids Sports Short', w / 2, 315);
+    ctx.font = '800 24px Arial';
+    ctx.fillText('Kids Sports Short', w / 2, 230);
 
     ctx.fillStyle = '#fff7db';
-    ctx.font = '700 26px Arial';
-    const title = (pkg?.youtube?.title || 'ZZTV Sports Short').slice(0, 31);
-    ctx.fillText(title, w / 2, 380);
+    ctx.font = '800 24px Arial';
+    wrapText(ctx, pkg.youtube?.title || 'ZZTV Sports Short', w / 2, 282, w - 80, 30, 2);
 
-    ctx.font = '600 24px Arial';
     ctx.fillStyle = '#f2df9c';
-    ctx.fillText('Original content • Private only', w / 2, 440);
+    ctx.font = '700 21px Arial';
+    wrapText(ctx, line, w / 2, 370, w - 74, 28, 3);
 
     ctx.fillStyle = '#ffdc73';
-    ctx.font = '900 104px Arial';
-    const ballX = 70 + progress * (w - 140);
-    const ballY = 520 + Math.sin(progress * Math.PI * 4) * 35;
+    ctx.font = '900 86px Arial';
+    const ballX = 48 + progress * (w - 96);
+    const ballY = 512 + Math.sin(progress * Math.PI * 4) * 36;
     ctx.fillText('🏀', ballX, ballY);
 
     ctx.fillStyle = '#fff7db';
-    ctx.font = '800 28px Arial';
+    ctx.font = '800 25px Arial';
     ctx.fillText('Practice smarter today', w / 2, 585);
 
     ctx.fillStyle = '#47d16c';
@@ -376,7 +383,55 @@
     ctx.strokeRect(45, 615, w - 90, 10);
   }
 
-  async function createTestVideoBlob(pkg) {
+  async function buildAudioStream(audioBlob, durationMs) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return { tracks: [], start: () => {}, stop: () => {} };
+
+    const audioCtx = new AudioContext();
+    const destination = audioCtx.createMediaStreamDestination();
+    const master = audioCtx.createGain();
+    master.gain.value = 0.75;
+    master.connect(destination);
+
+    let source = null;
+    if (audioBlob) {
+      try {
+        const buffer = await audioCtx.decodeAudioData(await audioBlob.arrayBuffer());
+        source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        const voiceGain = audioCtx.createGain();
+        voiceGain.gain.value = 0.95;
+        source.connect(voiceGain).connect(master);
+      } catch {
+        source = null;
+      }
+    }
+
+    const osc = audioCtx.createOscillator();
+    const beatGain = audioCtx.createGain();
+    osc.frequency.value = 146;
+    osc.type = 'sine';
+    beatGain.gain.value = source ? 0.015 : 0.035;
+    osc.connect(beatGain).connect(master);
+
+    return {
+      tracks: destination.stream.getAudioTracks(),
+      start: async () => {
+        await audioCtx.resume();
+        osc.start();
+        if (source) source.start();
+        setTimeout(() => {
+          try { osc.stop(); } catch {}
+          try { if (source) source.stop(); } catch {}
+        }, durationMs + 400);
+      },
+      stop: async () => {
+        try { await audioCtx.close(); } catch {}
+      }
+    };
+  }
+
+  async function createVideoBlob(pkg, { audioBlob = null, mode = 'production' } = {}) {
     if (!window.MediaRecorder) throw new Error('MediaRecorder is not supported in this browser. Try Chrome or Safari desktop.');
     const canvas = document.createElement('canvas');
     canvas.width = 360;
@@ -385,10 +440,12 @@
     if (!ctx) throw new Error('Canvas rendering is not available.');
     if (!canvas.captureStream) throw new Error('Canvas video capture is not supported in this browser.');
 
-    const durationMs = 3600;
-    const stream = canvas.captureStream(24);
+    const durationMs = mode === 'test' ? 3600 : 11500;
+    const canvasStream = canvas.captureStream(24);
+    const audio = await buildAudioStream(audioBlob, durationMs);
+    const stream = new MediaStream([...canvasStream.getVideoTracks(), ...audio.tracks]);
     const mimeType = bestVideoMimeType();
-    const options = { videoBitsPerSecond: 350000 };
+    const options = { videoBitsPerSecond: mode === 'test' ? 350000 : 650000 };
     if (mimeType) options.mimeType = mimeType;
 
     return new Promise((resolve, reject) => {
@@ -397,10 +454,9 @@
       try {
         recorder = new MediaRecorder(stream, options);
       } catch {
-        try {
-          recorder = new MediaRecorder(stream);
-        } catch (fallbackError) {
+        try { recorder = new MediaRecorder(stream); } catch (fallbackError) {
           stream.getTracks().forEach((track) => track.stop());
+          audio.stop();
           reject(fallbackError);
           return;
         }
@@ -411,26 +467,29 @@
       };
       recorder.onerror = () => {
         stream.getTracks().forEach((track) => track.stop());
+        audio.stop();
         reject(new Error('Video recorder failed.'));
       };
       recorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop());
+        audio.stop();
         resolve(new Blob(chunks, { type: recorder.mimeType || mimeType || 'video/webm' }));
       };
 
       const start = performance.now();
       function frame(now) {
         const elapsed = now - start;
-        drawTestFrame(ctx, canvas, elapsed, durationMs, pkg);
+        drawFrame(ctx, canvas, elapsed, durationMs, pkg, mode);
         if (elapsed < durationMs) requestAnimationFrame(frame);
       }
 
-      drawTestFrame(ctx, canvas, 0, durationMs, pkg);
+      drawFrame(ctx, canvas, 0, durationMs, pkg, mode);
       recorder.start(250);
+      audio.start();
       requestAnimationFrame(frame);
       setTimeout(() => {
         if (recorder.state !== 'inactive') recorder.stop();
-      }, durationMs + 250);
+      }, durationMs + 300);
     });
   }
 
@@ -451,6 +510,28 @@
     return { message, reason, status };
   }
 
+  async function uploadPrivateVideoBlob(blob, pkg, { test = false } = {}) {
+    const dataUrl = await blobToDataUrl(blob);
+    const response = await fetch(apiUrl('/api/youtube/upload-direct'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dataUrl,
+        title: test ? 'ZZTV Private Test Upload' : pkg.youtube.title,
+        description: test ? 'Private test upload from ZZTV. This original clip confirms OAuth and upload are working.' : `${pkg.youtube.description}\n\nUploaded private-first by ZZTV for review.`,
+        tags: test ? ['ZZTV', 'kids sports', 'private test'] : pkg.youtube.tags,
+        privacyStatus: 'private',
+        selfDeclaredMadeForKids: true
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) {
+      const issue = uploadErrorMessage(data, response);
+      throw Object.assign(new Error(issue.message), issue);
+    }
+    return data;
+  }
+
   async function createAndUploadPrivateTest() {
     if (uploadTestBtn?.disabled) return;
     const health = await checkApiHealth();
@@ -467,41 +548,76 @@
       uploadTestBtn.disabled = true;
       setStatus('Creating private test video...');
       log('Creating tiny original ZZTV test video in browser...', 'warn');
-      const blob = await createTestVideoBlob(payload);
+      const blob = await createVideoBlob(payload, { mode: 'test' });
       log(`Created test video: ${Math.round(blob.size / 1024)} KB, ${blob.type || 'video'}`, 'pass');
-
       setStatus('Uploading private test video...');
-      const dataUrl = await blobToDataUrl(blob);
-      const response = await fetch(apiUrl('/api/youtube/upload-direct'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dataUrl,
-          title: 'ZZTV Private Test Upload',
-          description: 'Private test upload from ZZTV. This original clip confirms OAuth and upload are working.',
-          tags: ['ZZTV', 'kids sports', 'private test'],
-          privacyStatus: 'private',
-          selfDeclaredMadeForKids: true
-        })
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.ok) {
-        const issue = uploadErrorMessage(data, response);
-        log(`Private upload failed: ${issue.message}`, 'fail');
-        if (issue.reason) log(`YouTube reason: ${issue.reason}`, 'fail');
-        if (issue.status) log(`YouTube status: ${issue.status}`, 'fail');
-        setStatus('Private upload failed.');
-        return;
-      }
-
+      const data = await uploadPrivateVideoBlob(blob, payload, { test: true });
       log(`Private YouTube upload PASSED: ${data.url}`, 'pass');
       if (data.studioUrl) log(`Studio edit link: ${data.studioUrl}`, 'pass');
       setStatus('Private YouTube test uploaded.');
     } catch (error) {
       log(`Private upload failed: ${error.message}`, 'fail');
+      if (error.reason) log(`YouTube reason: ${error.reason}`, 'fail');
+      if (error.status) log(`YouTube status: ${error.status}`, 'fail');
       setStatus('Private upload failed.');
     } finally {
       if (uploadTestBtn) uploadTestBtn.disabled = false;
+    }
+  }
+
+  async function runFullPrivateBuild() {
+    if (fullBuildBtn?.disabled) return;
+    const health = await checkApiHealth();
+    if (!health?.env?.youtubeUploadReady) {
+      log('Full build blocked: YouTube upload is not ready.', 'fail');
+      setStatus('YouTube upload not ready.');
+      return;
+    }
+
+    try {
+      fullBuildBtn.disabled = true;
+      uploadTestBtn.disabled = true;
+      startBtn.disabled = true;
+      logBox.textContent = `Full Private Build started at ${nowLabel()}`;
+      setStatus('Generating production package...');
+
+      try {
+        latestPackage = await generatePackageWithBackend();
+        log('Generated production package with OpenAI backend', 'pass');
+      } catch (error) {
+        latestPackage = buildPackage();
+        log(`OpenAI package fallback used: ${error.message}`, 'warn');
+      }
+      renderPackage(latestPackage);
+      localStorage.setItem('zztv.latestPackage', JSON.stringify(latestPackage, null, 2));
+
+      let audioBlob = null;
+      try {
+        setStatus('Making narration audio...');
+        audioBlob = await fetchVoiceBlob(latestPackage);
+        log(`Narration MP3 generated: ${Math.round(audioBlob.size / 1024)} KB`, 'pass');
+      } catch (error) {
+        log(`Narration fallback used: ${error.message}`, 'warn');
+      }
+
+      setStatus('Rendering vertical video...');
+      const videoBlob = await createVideoBlob(latestPackage, { audioBlob, mode: 'production' });
+      log(`Rendered private review video: ${Math.round(videoBlob.size / 1024)} KB, ${videoBlob.type || 'video'}`, 'pass');
+
+      setStatus('Uploading private production video...');
+      const result = await uploadPrivateVideoBlob(videoBlob, latestPackage, { test: false });
+      log(`FULL PRIVATE BUILD PASSED: ${result.url}`, 'pass');
+      if (result.studioUrl) log(`Studio review link: ${result.studioUrl}`, 'pass');
+      setStatus('Full private build uploaded. Review in YouTube Studio.');
+    } catch (error) {
+      log(`Full Private Build failed: ${error.message}`, 'fail');
+      if (error.reason) log(`YouTube reason: ${error.reason}`, 'fail');
+      if (error.status) log(`YouTube status: ${error.status}`, 'fail');
+      setStatus('Full private build failed.');
+    } finally {
+      if (fullBuildBtn) fullBuildBtn.disabled = false;
+      if (uploadTestBtn) uploadTestBtn.disabled = false;
+      if (startBtn) startBtn.disabled = false;
     }
   }
 
@@ -568,6 +684,7 @@
     voiceBtn?.addEventListener('click', makeVoice);
     youtubeAuthBtn?.addEventListener('click', openYouTubeAuth);
     uploadTestBtn?.addEventListener('click', createAndUploadPrivateTest);
+    fullBuildBtn?.addEventListener('click', runFullPrivateBuild);
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(() => log('Offline install worker not registered; app still works online', 'warn'));
@@ -582,6 +699,7 @@
     setStatus(`Failed: ${event.message}`);
     if (startBtn) startBtn.disabled = false;
     if (uploadTestBtn) uploadTestBtn.disabled = false;
+    if (fullBuildBtn) fullBuildBtn.disabled = false;
   });
 
   boot();
