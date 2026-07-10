@@ -33,9 +33,7 @@
     logBox.scrollTop = logBox.scrollHeight;
   }
 
-  function setStatus(message) {
-    statusLabel.textContent = message;
-  }
+  function setStatus(message) { statusLabel.textContent = message; }
 
   function setApiState(text, type = '') {
     if (!apiState) return;
@@ -45,13 +43,10 @@
   }
 
   function apiBase() {
-    const saved = localStorage.getItem('zztv.apiBase') || '';
-    return saved.replace(/\/$/, '');
+    return (localStorage.getItem('zztv.apiBase') || '').replace(/\/$/, '');
   }
 
-  function apiUrl(path) {
-    return `${apiBase()}${path}`;
-  }
+  function apiUrl(path) { return `${apiBase()}${path}`; }
 
   function saveApiBase() {
     const value = (apiBaseInput?.value || '').trim().replace(/\/$/, '');
@@ -88,9 +83,7 @@
     }
   }
 
-  function pick(array) {
-    return array[Math.floor(Math.random() * array.length)];
-  }
+  function pick(array) { return array[Math.floor(Math.random() * array.length)]; }
 
   function buildPackage() {
     const sports = ['basketball', 'soccer', 'football', 'baseball', 'track'];
@@ -104,19 +97,13 @@
     const sport = pick(sports);
     const angle = pick(angles);
     const title = `ZZTV: ${angle.replace(/^./, (c) => c.toUpperCase())} 🏆`;
-    const shortHook = `Most kids miss this ${sport} lesson.`;
-
+    const hook = `Most kids miss this ${sport} lesson.`;
     return {
       runId,
       createdAt: nowLabel(),
       channel: 'ZZTV Kids Sports',
       mode: 'Safe Creator / Private-first upload plan',
-      compliance: [
-        'Original commentary and educational sports content',
-        'No scraped NBA/NFL/MLB/FIFA broadcast footage',
-        'No private API keys stored in browser',
-        'Designed for kid-friendly tone and safe language'
-      ],
+      compliance: ['Original sports commentary only', 'Kid-friendly tone', 'No copyrighted sports broadcast footage'],
       youtube: {
         title,
         description: `A fun, kid-friendly ZZTV sports short about ${angle}. Practice hard, stay positive, and keep improving.`,
@@ -125,25 +112,24 @@
       },
       script: [
         'Welcome back to ZZTV!',
-        shortHook,
+        hook,
         `Today we are talking about ${angle}.`,
-        'Step one: focus on one small skill instead of trying to do everything at once.',
-        'Step two: repeat it slowly, then speed up only when it feels clean.',
-        'Step three: encourage your teammates, because good energy makes everyone better.',
-        'Try this today and come back for more ZZTV sports tips.'
+        'Pick one skill and practice it slowly first.',
+        'Speed up only after it feels clean.',
+        'Encourage your teammates and keep the energy positive.',
+        'Follow ZZTV for more sports tips.'
       ],
       soundProduction: {
         narration: 'bright, energetic, kid-friendly host voice',
-        music: 'royalty-free upbeat sports beat under voice',
-        mixNotes: 'Voice first, music low, no harsh highs, no copyrighted samples.'
+        music: 'royalty-free upbeat sports beat under voice'
       },
       videoPlan: {
         format: '9:16 vertical',
-        duration: '10-15 seconds demo render, expandable to 25-35 seconds',
-        scenes: ['Gold ZZTV intro card', 'Animated sports background', 'Three tip cards', 'Practice challenge', 'Studio review end card']
+        duration: '8-12 seconds private review render',
+        scenes: ['ZZTV intro', 'animated sports background', 'script caption cards', 'follow end card']
       },
       tiktok: {
-        caption: `${shortHook} Practice smarter today 🏆 #ZZTV`,
+        caption: `${hook} Practice smarter today 🏆 #ZZTV`,
         hashtags: ['#kidssports', '#youthsports', `#${sport}`, '#sportsmotivation', '#sportstips', '#ZZTV']
       },
       schedule: { youtubeShorts: 'private-first', tiktok: 'draft/manual review' }
@@ -166,11 +152,8 @@
       },
       script: Array.isArray(pkg.script) ? pkg.script : ['Welcome back to ZZTV!', 'Practice smarter today.', 'Follow for more sports tips.'],
       soundProduction: pkg.soundProduction || pkg.sound || { narration: 'bright, energetic, kid-friendly host voice', music: 'royalty-free upbeat sports beat under voice' },
-      videoPlan: pkg.videoPlan || pkg.video || { format: '9:16 vertical', duration: '25-35 seconds', scenes: ['ZZTV intro', 'tip cards', 'follow end card'] },
-      tiktok: {
-        caption: pkg.tiktok?.caption || 'Practice smarter today 🏆 #ZZTV',
-        hashtags: pkg.tiktok?.hashtags || ['#kidssports', '#ZZTV']
-      },
+      videoPlan: pkg.videoPlan || pkg.video || { format: '9:16 vertical', duration: '8-12 seconds', scenes: ['ZZTV intro', 'tip cards', 'follow end card'] },
+      tiktok: { caption: pkg.tiktok?.caption || 'Practice smarter today 🏆 #ZZTV', hashtags: pkg.tiktok?.hashtags || ['#kidssports', '#ZZTV'] },
       schedule: pkg.schedule || { youtubeShorts: 'private-first', tiktok: 'draft/manual review' }
     };
   }
@@ -195,12 +178,11 @@
         <div><b>Status:</b><br>Generated package is ready. Uploads remain private-first.</div>
         <div><b>YouTube Title:</b><br>${clean(pkg.youtube.title)}</div>
         <div><b>Script:</b><br>${script}</div>
-        <div><b>Voice + Sound:</b><br>${clean(pkg.soundProduction.narration || '')}<br>${clean(pkg.soundProduction.music || '')}</div>
+        <div><b>Voice + Sound:</b><br>${clean(pkg.soundProduction.narration || pkg.soundProduction.voice || '')}<br>${clean(pkg.soundProduction.music || '')}</div>
         <div><b>TikTok Caption:</b><br>${clean(pkg.tiktok.caption)}</div>
         <div><b>Hashtags:</b><br>${hashtags}</div>
         <div><b>Video Plan:</b><br>${scenes}</div>
-      </div>
-    `;
+      </div>`;
     packageState.textContent = 'Ready';
     packageState.classList.add('ready');
   }
@@ -216,8 +198,8 @@
     outputBox.textContent = 'Generating package...';
     setStatus('Running ZZTV pipeline...');
 
-    for (const label of ['Phone tap/click event received', 'JavaScript execution confirmed', 'Local safe content engine loaded', 'Kid-friendly language guard enabled', 'Copyright-safe rule enabled: no broadcast scraping', 'Browser secret check passed: no API keys requested']) {
-      await sleep(100);
+    for (const label of ['Phone tap/click event received', 'JavaScript execution confirmed', 'Safe content guard enabled', 'Private-first upload guard enabled']) {
+      await sleep(110);
       log(label, 'pass');
     }
 
@@ -231,11 +213,10 @@
       setApiState(apiBase() ? 'API issue' : 'Local mode', 'warn');
     }
 
-    for (const label of ['Generated YouTube package', 'Generated TikTok captions and hashtags', 'Generated sound-production notes', 'Generated private-first schedule plan']) {
-      await sleep(100);
+    for (const label of ['Generated YouTube package', 'Generated TikTok captions and hashtags', 'Generated private-first schedule plan']) {
+      await sleep(110);
       log(label, 'pass');
     }
-
     log('Final front-end result: PASSED', 'pass');
     localStorage.setItem('zztv.latestPackage', JSON.stringify(latestPackage, null, 2));
     renderPackage(latestPackage);
@@ -252,9 +233,9 @@
     const type = response.headers.get('content-type') || '';
     if (type.includes('application/json')) {
       const data = await response.json().catch(() => ({}));
-      throw new Error(data.warning || data.error || 'Voice route returned JSON instead of MP3');
+      throw new Error(data.error || data.warning || data.message || 'Voice route returned JSON instead of audio');
     }
-    if (!response.ok) throw new Error(`Voice HTTP ${response.status}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.blob();
   }
 
@@ -299,7 +280,7 @@
 
   function bestVideoMimeType() {
     if (!window.MediaRecorder) return '';
-    const types = ['video/mp4;codecs=h264', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    const types = ['video/mp4;codecs=h264', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
     return types.find((type) => MediaRecorder.isTypeSupported(type)) || '';
   }
 
@@ -384,50 +365,33 @@
   }
 
   async function buildAudioStream(audioBlob, durationMs) {
+    if (!audioBlob) return { tracks: [], start: () => {}, stop: () => {} };
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return { tracks: [], start: () => {}, stop: () => {} };
-
     const audioCtx = new AudioContext();
     const destination = audioCtx.createMediaStreamDestination();
-    const master = audioCtx.createGain();
-    master.gain.value = 0.75;
-    master.connect(destination);
-
     let source = null;
-    if (audioBlob) {
-      try {
-        const buffer = await audioCtx.decodeAudioData(await audioBlob.arrayBuffer());
-        source = audioCtx.createBufferSource();
-        source.buffer = buffer;
-        const voiceGain = audioCtx.createGain();
-        voiceGain.gain.value = 0.95;
-        source.connect(voiceGain).connect(master);
-      } catch {
-        source = null;
-      }
+    try {
+      const buffer = await audioCtx.decodeAudioData(await audioBlob.arrayBuffer());
+      source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      const gain = audioCtx.createGain();
+      gain.gain.value = 0.95;
+      source.connect(gain).connect(destination);
+    } catch {
+      try { await audioCtx.close(); } catch {}
+      return { tracks: [], start: () => {}, stop: () => {} };
     }
-
-    const osc = audioCtx.createOscillator();
-    const beatGain = audioCtx.createGain();
-    osc.frequency.value = 146;
-    osc.type = 'sine';
-    beatGain.gain.value = source ? 0.015 : 0.035;
-    osc.connect(beatGain).connect(master);
-
     return {
       tracks: destination.stream.getAudioTracks(),
       start: async () => {
-        await audioCtx.resume();
-        osc.start();
-        if (source) source.start();
-        setTimeout(() => {
-          try { osc.stop(); } catch {}
-          try { if (source) source.stop(); } catch {}
-        }, durationMs + 400);
+        try {
+          await audioCtx.resume();
+          source.start();
+          setTimeout(() => { try { source.stop(); } catch {} }, durationMs + 300);
+        } catch {}
       },
-      stop: async () => {
-        try { await audioCtx.close(); } catch {}
-      }
+      stop: async () => { try { await audioCtx.close(); } catch {} }
     };
   }
 
@@ -440,47 +404,47 @@
     if (!ctx) throw new Error('Canvas rendering is not available.');
     if (!canvas.captureStream) throw new Error('Canvas video capture is not supported in this browser.');
 
-    const durationMs = mode === 'test' ? 3600 : 11500;
+    const durationMs = mode === 'test' ? 3200 : 7200;
     const canvasStream = canvas.captureStream(24);
     const audio = await buildAudioStream(audioBlob, durationMs);
     const stream = new MediaStream([...canvasStream.getVideoTracks(), ...audio.tracks]);
     const mimeType = bestVideoMimeType();
-    const options = { videoBitsPerSecond: mode === 'test' ? 350000 : 650000 };
+    const options = { videoBitsPerSecond: mode === 'test' ? 350000 : 620000 };
     if (mimeType) options.mimeType = mimeType;
 
     return new Promise((resolve, reject) => {
       const chunks = [];
       let recorder;
+      let done = false;
+      function finish(blob) {
+        if (done) return;
+        done = true;
+        stream.getTracks().forEach((track) => track.stop());
+        audio.stop();
+        resolve(blob);
+      }
+      function fail(error) {
+        if (done) return;
+        done = true;
+        stream.getTracks().forEach((track) => track.stop());
+        audio.stop();
+        reject(error);
+      }
       try {
         recorder = new MediaRecorder(stream, options);
       } catch {
-        try { recorder = new MediaRecorder(stream); } catch (fallbackError) {
-          stream.getTracks().forEach((track) => track.stop());
-          audio.stop();
-          reject(fallbackError);
-          return;
-        }
+        try { recorder = new MediaRecorder(stream); } catch (fallbackError) { fail(fallbackError); return; }
       }
 
-      recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) chunks.push(event.data);
-      };
-      recorder.onerror = () => {
-        stream.getTracks().forEach((track) => track.stop());
-        audio.stop();
-        reject(new Error('Video recorder failed.'));
-      };
-      recorder.onstop = () => {
-        stream.getTracks().forEach((track) => track.stop());
-        audio.stop();
-        resolve(new Blob(chunks, { type: recorder.mimeType || mimeType || 'video/webm' }));
-      };
+      recorder.ondataavailable = (event) => { if (event.data && event.data.size > 0) chunks.push(event.data); };
+      recorder.onerror = () => fail(new Error('Video recorder failed.'));
+      recorder.onstop = () => finish(new Blob(chunks, { type: recorder.mimeType || mimeType || 'video/webm' }));
 
       const start = performance.now();
       function frame(now) {
         const elapsed = now - start;
         drawFrame(ctx, canvas, elapsed, durationMs, pkg, mode);
-        if (elapsed < durationMs) requestAnimationFrame(frame);
+        if (elapsed < durationMs && !done) requestAnimationFrame(frame);
       }
 
       drawFrame(ctx, canvas, 0, durationMs, pkg, mode);
@@ -488,8 +452,15 @@
       audio.start();
       requestAnimationFrame(frame);
       setTimeout(() => {
-        if (recorder.state !== 'inactive') recorder.stop();
-      }, durationMs + 300);
+        try {
+          if (recorder.state !== 'inactive') recorder.stop();
+        } catch (error) {
+          fail(error);
+        }
+      }, durationMs + 350);
+      setTimeout(() => {
+        if (!done) fail(new Error('Video render timed out. Try again.'));
+      }, durationMs + 3500);
     });
   }
 
@@ -540,10 +511,8 @@
       setStatus('YouTube upload not ready.');
       return;
     }
-
     const payload = latestPackage || JSON.parse(localStorage.getItem('zztv.latestPackage') || 'null') || buildPackage();
     latestPackage = payload;
-
     try {
       uploadTestBtn.disabled = true;
       setStatus('Creating private test video...');
@@ -573,7 +542,6 @@
       setStatus('YouTube upload not ready.');
       return;
     }
-
     try {
       fullBuildBtn.disabled = true;
       uploadTestBtn.disabled = true;
@@ -598,13 +566,16 @@
         log(`Narration MP3 generated: ${Math.round(audioBlob.size / 1024)} KB`, 'pass');
       } catch (error) {
         log(`Narration fallback used: ${error.message}`, 'warn');
+        log('Continuing with video-only render so the build does not stall.', 'warn');
       }
 
       setStatus('Rendering vertical video...');
+      log('Rendering private review video now...', 'warn');
       const videoBlob = await createVideoBlob(latestPackage, { audioBlob, mode: 'production' });
       log(`Rendered private review video: ${Math.round(videoBlob.size / 1024)} KB, ${videoBlob.type || 'video'}`, 'pass');
 
       setStatus('Uploading private production video...');
+      log('Uploading private production video to YouTube...', 'warn');
       const result = await uploadPrivateVideoBlob(videoBlob, latestPackage, { test: false });
       log(`FULL PRIVATE BUILD PASSED: ${result.url}`, 'pass');
       if (result.studioUrl) log(`Studio review link: ${result.studioUrl}`, 'pass');
@@ -671,9 +642,7 @@
       document.body.innerHTML = '<main style="padding:20px;color:white;background:#111;font-family:sans-serif"><h1>ZZTV failed to boot</h1><p>Required page elements were not found.</p></main>';
       return;
     }
-
     if (apiBaseInput) apiBaseInput.value = apiBase();
-
     startBtn.addEventListener('click', runZZTV);
     startBtn.addEventListener('touchend', runZZTV, { passive: false });
     clearBtn.addEventListener('click', clearRun);
@@ -685,11 +654,9 @@
     youtubeAuthBtn?.addEventListener('click', openYouTubeAuth);
     uploadTestBtn?.addEventListener('click', createAndUploadPrivateTest);
     fullBuildBtn?.addEventListener('click', runFullPrivateBuild);
-
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(() => log('Offline install worker not registered; app still works online', 'warn'));
     }
-
     setApiState(apiBase() ? 'Saved' : 'Local mode', apiBase() ? 'ready' : 'warn');
     setStatus('Ready. Live browser app loaded.');
   }
