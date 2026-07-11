@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   const code = req.query.code;
   if (!code) {
     res.setHeader('Content-Type', 'text/html');
-    return res.status(400).send(html('<h1>No code received</h1><p>Start from <code>/api/youtube/auth-url</code>.</p>'));
+    return res.status(400).send(html('<h1>No code received</h1><p>Start from <code>/api/youtube/auth-url?debug=1</code>.</p>'));
   }
 
   const oauth2Client = new google.auth.OAuth2(
@@ -30,11 +30,14 @@ export default async function handler(req, res) {
 
   try {
     const { tokens } = await oauth2Client.getToken(code);
+    const refresh = tokens.refresh_token || '';
     res.setHeader('Content-Type', 'text/html');
     return res.status(200).send(html(`
       <h1>ZZTV YouTube Auth Complete</h1>
       <p><b>Copy this refresh token into Vercel as <code>YOUTUBE_REFRESH_TOKEN</code>.</b></p>
-      <pre>${tokens.refresh_token || 'No refresh token returned. Re-run auth-url with prompt=consent or remove old app permission from Google Account.'}</pre>
+      <p>This new token is expected to include both upload permission and channel-check permission.</p>
+      <pre>${refresh || 'No refresh token returned. Go to your Google Account permissions, remove ZZTV/this OAuth app access, then start /api/youtube/auth-url?debug=1 again.'}</pre>
+      <p>After saving it in Vercel, redeploy, then open ZZTV and press Music Mode / Check API to confirm the channel name.</p>
       <p>Do not commit this token to GitHub.</p>
     `));
   } catch (error) {
