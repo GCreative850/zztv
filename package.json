@@ -1,6 +1,6 @@
 {
   "name": "zztv-auto-sports-studio",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +8,7 @@
     "check": "node scripts/self-test.js"
   },
   "dependencies": {
+    "ffmpeg-static": "latest",
     "googleapis": "latest",
     "openai": "latest"
   },
