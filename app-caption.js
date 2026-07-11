@@ -21,6 +21,7 @@
 
   let latestPackage = null;
   let runId = 0;
+  let audioUnlocked = false;
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const nowLabel = () => new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
@@ -41,6 +42,27 @@
     apiState.textContent = text;
     apiState.classList.remove('ready', 'warn');
     if (type) apiState.classList.add(type);
+  }
+
+  async function unlockAudioForGesture() {
+    if (audioUnlocked) return true;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return false;
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      gain.gain.value = 0.0001;
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.03);
+      await ctx.resume();
+      setTimeout(() => { try { ctx.close(); } catch {} }, 120);
+      audioUnlocked = true;
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   function saveApiBase() {
@@ -176,13 +198,26 @@
   }
 
   async function makeVoice() {
-    log('Narration is disabled for release flow. Use music mode instead.', 'warn');
-    log('Full Music Build does not use TTS or OpenAI voice credits.', 'pass');
+    const ok = await unlockAudioForGesture();
+    log(ok ? 'Music engine unlocked for this browser session.' : 'Music engine could not be unlocked yet. Tap Run Full Music Build.', ok ? 'pass' : 'warn');
+    log('Narration is disabled. Release flow uses original generated music.', 'pass');
   }
 
-  function bestVideoType() {
+  function bestVideoType(withMusic = false, mode = 'normal') {
     if (!window.MediaRecorder) return '';
-    return ['video/mp4;codecs=h264', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'].find((type) => MediaRecorder.isTypeSupported(type)) || '';
+    const audioCapable = [
+      'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+      'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
+      'video/mp4;codecs=h264,aac',
+      'video/webm;codecs=vp8,opus',
+      'video/webm;codecs=vp9,opus',
+      'video/mp4',
+      'video/webm'
+    ];
+    const videoOnly = ['video/mp4;codecs=h264', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'];
+    if (mode === 'default') return '';
+    const list = withMusic ? audioCapable : videoOnly;
+    return list.find((type) => MediaRecorder.isTypeSupported(type)) || '';
   }
 
   function wrap(ctx, text, x, y, maxWidth, lineHeight, maxLines = 3) {
@@ -258,7 +293,7 @@
     const audioContext = new AudioContext();
     const destination = audioContext.createMediaStreamDestination();
     const master = audioContext.createGain();
-    master.gain.value = 0.18;
+    master.gain.value = 0.20;
     master.connect(destination);
     const nodes = [];
 
@@ -268,7 +303,7 @@
       oscillator.type = type;
       oscillator.frequency.setValueAtTime(frequency, time);
       gain.gain.setValueAtTime(0.0001, time);
-      gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, gainValue), time + 0.015);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, gainValue), time + 0.012);
       gain.gain.exponentialRampToValueAtTime(0.0001, time + length);
       oscillator.connect(gain).connect(master);
       oscillator.start(time);
@@ -293,7 +328,12 @@
     return {
       stream: destination.stream,
       ready: true,
-      start: async () => { try { await audioContext.resume(); schedule(); } catch {} },
+      start: async () => {
+        try {
+          await audioContext.resume();
+          schedule();
+        } catch {}
+      },
       stop: async () => {
         for (const node of nodes) { try { node.stop(); } catch {} }
         try { await audioContext.close(); } catch {}
@@ -301,7 +341,7 @@
     };
   }
 
-  async function makeVideo(pkg, { test = false, withMusic = true } = {}) {
+  async function makeVideo(pkg, { test = false, withMusic = true, mimeMode = 'normal' } = {}) {
     if (!window.MediaRecorder) throw new Error('MediaRecorder unsupported');
     const canvas = document.createElement('canvas');
     canvas.width = 360;
@@ -314,8 +354,8 @@
     const music = withMusic ? makeMusicStream(durationMs) : { stream: new MediaStream(), start: () => {}, stop: () => {}, ready: false };
     const tracks = [...canvasStream.getVideoTracks(), ...music.stream.getAudioTracks()];
     const stream = new MediaStream(tracks);
-    const mimeType = bestVideoType();
-    const options = { videoBitsPerSecond: test ? 280000 : 520000 };
+    const mimeType = bestVideoType(withMusic, mimeMode);
+    const options = { videoBitsPerSecond: test ? 280000 : 520000, audioBitsPerSecond: 64000 };
     if (mimeType) options.mimeType = mimeType;
 
     return new Promise((resolve, reject) => {
@@ -337,7 +377,7 @@
         }
         done = true;
         stopAll();
-        resolve({ blob: new Blob(chunks, { type: recorder.mimeType || mimeType || 'video/webm' }), musicReady: music.ready && withMusic, forced });
+        resolve({ blob: new Blob(chunks, { type: recorder.mimeType || mimeType || 'video/webm' }), musicReady: music.ready && withMusic, forced, mime: recorder.mimeType || mimeType || 'browser-default' });
       };
       const fail = (error) => {
         if (done) return;
@@ -360,19 +400,20 @@
         if (elapsed < durationMs && !done) requestAnimationFrame(frame);
       }
 
-      drawFrame(ctx, canvas, 0, durationMs, pkg, test);
-      recorder.start(250);
-      music.start();
-      requestAnimationFrame(frame);
+      const begin = async () => {
+        try { await music.start(); } catch {}
+        drawFrame(ctx, canvas, 0, durationMs, pkg, test);
+        recorder.start(250);
+        requestAnimationFrame(frame);
 
-      setTimeout(() => {
-        try { if (recorder.state !== 'inactive') recorder.requestData(); } catch {}
-        try { if (recorder.state !== 'inactive') recorder.stop(); } catch (error) { fail(error); }
-      }, durationMs + 250);
+        setTimeout(() => {
+          try { if (recorder.state !== 'inactive') recorder.requestData(); } catch {}
+          try { if (recorder.state !== 'inactive') recorder.stop(); } catch (error) { fail(error); }
+        }, durationMs + 250);
 
-      setTimeout(() => {
-        if (!done) finish(true);
-      }, durationMs + 2500);
+        setTimeout(() => { if (!done) finish(true); }, durationMs + 3000);
+      };
+      begin();
     });
   }
 
@@ -411,21 +452,29 @@
   }
 
   async function safeRenderVideo(pkg, { test = false } = {}) {
-    try {
-      const result = await makeVideo(pkg, { test, withMusic: true });
-      log(result.musicReady ? 'Original browser sports beat attached' : 'Music engine unavailable; rendered video-only', result.musicReady ? 'pass' : 'warn');
-      if (result.forced) log('Safari recorder forced finalization after flush; video data recovered.', 'warn');
-      return result;
-    } catch (error) {
-      log(`Music render retry: ${error.message}`, 'warn');
-      const fallback = await makeVideo(pkg, { test, withMusic: false });
-      log('Rendered fallback video without audio so upload can continue.', 'warn');
-      return fallback;
+    const attempts = [
+      { withMusic: true, mimeMode: 'normal', label: 'audio-capable recorder' },
+      { withMusic: true, mimeMode: 'default', label: 'browser-default recorder with music' },
+      { withMusic: false, mimeMode: 'normal', label: 'video-only fallback' }
+    ];
+
+    for (const attempt of attempts) {
+      try {
+        const result = await makeVideo(pkg, { test, withMusic: attempt.withMusic, mimeMode: attempt.mimeMode });
+        if (result.musicReady) log(`Original browser sports beat attached using ${result.mime || attempt.label}`, 'pass');
+        else log('Rendered fallback video without audio so upload can continue.', 'warn');
+        if (result.forced) log('Recorder forced finalization after flush; video data recovered.', 'warn');
+        return result;
+      } catch (error) {
+        log(`${attempt.label} retry: ${error.message}`, 'warn');
+      }
     }
+    throw new Error('Video render failed after all recorder attempts');
   }
 
   async function uploadTest() {
     if (uploadTestBtn.disabled) return;
+    await unlockAudioForGesture();
     const health = await checkApiHealth();
     if (!health?.env?.youtubeUploadReady) { log('YouTube upload not ready.', 'fail'); return; }
     const pkg = latestPackage || JSON.parse(localStorage.getItem('zztv.latestPackage') || 'null') || fallbackPackage();
@@ -450,6 +499,7 @@
 
   async function fullBuild() {
     if (fullBuildBtn.disabled) return;
+    await unlockAudioForGesture();
     const health = await checkApiHealth();
     if (!health?.env?.youtubeUploadReady) { log('Full build blocked: YouTube upload not ready.', 'fail'); return; }
     try {
@@ -468,6 +518,7 @@
       renderPackage(latestPackage);
       localStorage.setItem('zztv.latestPackage', JSON.stringify(latestPackage, null, 2));
       log('Music-first mode active: no narration or TTS is used.', 'pass');
+      log(audioUnlocked ? 'Audio unlocked for generated music.', 'pass' : 'Audio unlock unavailable; renderer will still attempt music.', 'warn');
       log('Generating original browser sports beat for the video.', 'pass');
       log('The script is rendered as large on-screen captions.', 'pass');
       setStatus('Rendering music video...');
