@@ -5,6 +5,7 @@
   const COMMONS_API = 'https://commons.wikimedia.org/w/api.php';
   const ALLOWED_MEDIA_HOSTS = new Set(['upload.wikimedia.org']);
   const VIDEO_PLACEHOLDER = 'data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22640%22 height=%22360%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23141722%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23f4cf78%22 font-family=%22Arial%22 font-size=%2232%22%3EZZTV STOCK VIDEO%3C/text%3E%3C/svg%3E';
+  const audioProbe = document.createElement('audio');
 
   function jsonResponse(body, status = 200) {
     return new Response(JSON.stringify(body), {
@@ -33,6 +34,8 @@
   }
 
   function secondsFromMetadata(info) {
+    const direct = Number(info?.duration || info?.commonmetadata?.duration || 0);
+    if (Number.isFinite(direct) && direct > 0) return direct;
     const match = metadata(info, 'Duration', '0').match(/[\d.]+/);
     return match ? Number(match[0]) : 0;
   }
@@ -46,7 +49,66 @@
     return { name: name || 'Free license', url, allowed };
   }
 
-  async function commonsSearch(query, kind) {
+  function normalizeMediaUrl(value = '') {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (raw.startsWith('//')) return `https:${raw}`;
+    return raw;
+  }
+
+  function playableAudioScore(candidate) {
+    const url = normalizeMediaUrl(candidate?.src || candidate?.url || '');
+    const type = String(candidate?.type || candidate?.mime || '').toLowerCase();
+    const key = String(candidate?.transcodekey || candidate?.shorttitle || '').toLowerCase();
+    if (!url) return -1;
+
+    const mp3 = type.includes('audio/mpeg') || type.includes('audio/mp3') || /\.mp3(?:$|\?)/i.test(url) || key.includes('mp3');
+    const m4a = type.includes('audio/mp4') || type.includes('audio/aac') || /\.(m4a|aac)(?:$|\?)/i.test(url) || key.includes('m4a');
+    const wav = type.includes('audio/wav') || type.includes('audio/x-wav') || /\.wav(?:$|\?)/i.test(url);
+    const ogg = type.includes('audio/ogg') || /\.(ogg|oga|opus)(?:$|\?)/i.test(url);
+    const flac = type.includes('audio/flac') || /\.flac(?:$|\?)/i.test(url);
+
+    if (mp3) return 100;
+    if (m4a) return 90;
+    if (wav) return 80;
+    if (ogg && audioProbe.canPlayType('audio/ogg; codecs="vorbis"')) return 40;
+    if (flac && audioProbe.canPlayType('audio/flac')) return 30;
+    if (type && audioProbe.canPlayType(type)) return 20;
+    return -1;
+  }
+
+  function choosePlayableAudio(info) {
+    const candidates = [
+      ...(Array.isArray(info?.derivatives) ? info.derivatives : []),
+      { src: info?.url, type: info?.mime }
+    ];
+    return candidates
+      .map((candidate) => ({ ...candidate, src: normalizeMediaUrl(candidate.src || candidate.url) }))
+      .filter((candidate) => candidate.src)
+      .sort((a, b) => playableAudioScore(b) - playableAudioScore(a))
+      .find((candidate) => playableAudioScore(candidate) >= 0) || null;
+  }
+
+  function chooseVideoSource(info) {
+    const candidates = [
+      { src: info?.url, type: info?.mime, width: info?.width, height: info?.height },
+      ...(Array.isArray(info?.derivatives) ? info.derivatives : [])
+    ]
+      .map((candidate) => ({ ...candidate, src: normalizeMediaUrl(candidate.src || candidate.url) }))
+      .filter((candidate) => candidate.src && String(candidate.type || '').startsWith('video/'));
+
+    const mp4 = candidates.filter((candidate) => String(candidate.type || '').includes('mp4') || /\.mp4(?:$|\?)/i.test(candidate.src));
+    const webm = candidates.filter((candidate) => String(candidate.type || '').includes('webm') || /\.webm(?:$|\?)/i.test(candidate.src));
+    const pool = mp4.length ? mp4 : webm.length ? webm : candidates;
+    return pool.sort((a, b) => {
+      const aPortrait = Number(a.height || 0) >= Number(a.width || 0) ? 1 : 0;
+      const bPortrait = Number(b.height || 0) >= Number(b.width || 0) ? 1 : 0;
+      if (aPortrait !== bPortrait) return bPortrait - aPortrait;
+      return Number(b.height || 0) - Number(a.height || 0);
+    })[0] || null;
+  }
+
+  async function fetchSearchPages(query, kind) {
     const fileType = kind === 'music' ? 'audio' : 'video';
     const params = new URLSearchParams({
       origin: '*',
@@ -70,49 +132,84 @@
       credentials: 'omit'
     });
     if (!response.ok) throw new Error(`Internet library request failed (${response.status}).`);
-
     const data = await response.json();
-    const pages = Array.isArray(data?.query?.pages) ? data.query.pages : [];
+    return Array.isArray(data?.query?.pages) ? data.query.pages : [];
+  }
+
+  async function fetchTimedMediaInfo(pageIds) {
+    if (!pageIds.length) return new Map();
+    const params = new URLSearchParams({
+      origin: '*',
+      action: 'query',
+      format: 'json',
+      formatversion: '2',
+      pageids: pageIds.join('|'),
+      prop: 'videoinfo',
+      viprop: 'url|size|mime|mediatype|derivatives|extmetadata',
+      viextmetadatalanguage: 'en',
+      viextmetadatafilter: 'Artist|Credit|LicenseShortName|LicenseUrl|UsageTerms|Duration|ImageDescription'
+    });
+    const response = await nativeFetch(`${COMMONS_API}?${params.toString()}`, {
+      headers: { Accept: 'application/json' },
+      mode: 'cors',
+      credentials: 'omit'
+    });
+    if (!response.ok) throw new Error(`Media compatibility request failed (${response.status}).`);
+    const data = await response.json();
+    const map = new Map();
+    for (const page of data?.query?.pages || []) {
+      const info = page?.videoinfo?.[0];
+      if (info) map.set(Number(page.pageid), { page, info });
+    }
+    return map;
+  }
+
+  async function commonsSearch(query, kind) {
+    const searchPages = await fetchSearchPages(query, kind);
+    const licensed = searchPages.filter((page) => {
+      const info = page?.imageinfo?.[0];
+      return info?.url && licenseDetails(info).allowed;
+    });
+    const details = await fetchTimedMediaInfo(licensed.map((page) => Number(page.pageid)).filter(Boolean));
     const results = [];
 
-    for (const page of pages) {
-      const info = page?.imageinfo?.[0];
+    for (const searchPage of licensed) {
+      const detail = details.get(Number(searchPage.pageid));
+      const info = detail?.info || searchPage?.imageinfo?.[0];
       if (!info?.url) continue;
-
-      const mime = String(info.mime || '').toLowerCase();
-      const mediatype = String(info.mediatype || '').toUpperCase();
-      const isAudio = mime.startsWith('audio/') || mediatype === 'AUDIO';
-      const isVideo = mime.startsWith('video/') || mediatype === 'VIDEO' || mediatype === 'MULTIMEDIA';
-      if (kind === 'music' ? !isAudio : !isVideo) continue;
-
       const license = licenseDetails(info);
       if (!license.allowed) continue;
-
+      const page = detail?.page || searchPage;
       const creator = metadata(info, 'Artist', metadata(info, 'Credit', 'Wikimedia Commons contributor'));
-      const pageUrl = info.descriptionurl || `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title)}`;
+      const pageUrl = info.descriptionurl || searchPage?.imageinfo?.[0]?.descriptionurl || `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title)}`;
       const name = cleanTitle(page.title);
 
       if (kind === 'music') {
+        const playable = choosePlayableAudio(info);
+        if (!playable) continue;
         results.push({
           id: page.pageid,
           name,
           artist: creator,
           duration: secondsFromMetadata(info),
-          audio: info.url,
-          image: info.thumburl || '',
+          audio: playable.src,
+          mime: playable.type || info.mime || 'audio/mpeg',
+          image: '',
           pageUrl,
           licenseUrl: license.url,
           licenseName: license.name,
           attribution: `${name} by ${creator} — ${license.name} via Wikimedia Commons`
         });
       } else {
+        const playable = chooseVideoSource(info);
+        if (!playable) continue;
         results.push({
           id: page.pageid,
           duration: secondsFromMetadata(info),
-          width: Number(info.width) || 0,
-          height: Number(info.height) || 0,
-          url: info.url,
-          preview: info.thumburl || VIDEO_PLACEHOLDER,
+          width: Number(playable.width || info.width) || 0,
+          height: Number(playable.height || info.height) || 0,
+          url: playable.src,
+          preview: searchPage?.imageinfo?.[0]?.thumburl || VIDEO_PLACEHOLDER,
           pageUrl,
           creator,
           creatorUrl: pageUrl,
@@ -122,7 +219,6 @@
 
       if (results.length >= 12) break;
     }
-
     return results;
   }
 
@@ -178,7 +274,7 @@
           query,
           results,
           provider: 'Wikimedia Commons',
-          note: 'Results are restricted to public-domain, CC0, or attribution-only licenses.'
+          note: 'Only phone-compatible audio is shown. MP3 transcodes are preferred automatically.'
         });
       } catch (error) {
         return jsonResponse({ error: error.message || 'Music search failed.' }, 502);
