@@ -4,6 +4,7 @@
   const nativeFetch = window.fetch.bind(window);
   const COMMONS_API = 'https://commons.wikimedia.org/w/api.php';
   const ALLOWED_MEDIA_HOSTS = new Set(['upload.wikimedia.org']);
+  const VIDEO_PLACEHOLDER = 'data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22640%22 height=%22360%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23141722%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23f4cf78%22 font-family=%22Arial%22 font-size=%2232%22%3EZZTV STOCK VIDEO%3C/text%3E%3C/svg%3E';
 
   function jsonResponse(body, status = 200) {
     return new Response(JSON.stringify(body), {
@@ -13,9 +14,9 @@
   }
 
   function stripHtml(value = '') {
-    const el = document.createElement('div');
-    el.innerHTML = String(value);
-    return (el.textContent || el.innerText || '').replace(/\s+/g, ' ').trim();
+    const element = document.createElement('div');
+    element.innerHTML = String(value);
+    return (element.textContent || element.innerText || '').replace(/\s+/g, ' ').trim();
   }
 
   function metadata(info, key, fallback = '') {
@@ -32,8 +33,7 @@
   }
 
   function secondsFromMetadata(info) {
-    const raw = metadata(info, 'Duration', '0');
-    const match = raw.match(/[\d.]+/);
+    const match = metadata(info, 'Duration', '0').match(/[\d.]+/);
     return match ? Number(match[0]) : 0;
   }
 
@@ -41,7 +41,7 @@
     const name = metadata(info, 'LicenseShortName', metadata(info, 'UsageTerms', ''));
     const url = metadata(info, 'LicenseUrl', '');
     const normalized = `${name} ${url}`.toLowerCase();
-    const blocked = /noncommercial|\bnc\b|no derivatives|\bnd\b/.test(normalized);
+    const blocked = /noncommercial|\bnc\b|no derivatives|\bnd\b|share alike|by-sa/.test(normalized);
     const allowed = !blocked && /public domain|cc0|creative commons attribution|cc by\b|licenses\/by\//.test(normalized);
     return { name: name || 'Free license', url, allowed };
   }
@@ -65,17 +65,20 @@
     });
 
     const response = await nativeFetch(`${COMMONS_API}?${params.toString()}`, {
-      headers: { Accept: 'application/json' }
+      headers: { Accept: 'application/json' },
+      mode: 'cors',
+      credentials: 'omit'
     });
     if (!response.ok) throw new Error(`Internet library request failed (${response.status}).`);
 
     const data = await response.json();
-    const pages = data?.query?.pages || [];
+    const pages = Array.isArray(data?.query?.pages) ? data.query.pages : [];
     const results = [];
 
     for (const page of pages) {
       const info = page?.imageinfo?.[0];
       if (!info?.url) continue;
+
       const mime = String(info.mime || '').toLowerCase();
       const mediatype = String(info.mediatype || '').toUpperCase();
       const isAudio = mime.startsWith('audio/') || mediatype === 'AUDIO';
@@ -109,7 +112,7 @@
           width: Number(info.width) || 0,
           height: Number(info.height) || 0,
           url: info.url,
-          preview: info.thumburl || '',
+          preview: info.thumburl || VIDEO_PLACEHOLDER,
           pageUrl,
           creator,
           creatorUrl: pageUrl,
@@ -136,7 +139,11 @@
     }
 
     try {
-      const response = await nativeFetch(target.toString(), { mode: 'cors', credentials: 'omit' });
+      const response = await nativeFetch(target.toString(), {
+        mode: 'cors',
+        credentials: 'omit',
+        cache: 'force-cache'
+      });
       if (!response.ok) return jsonResponse({ error: `Media download failed (${response.status}).` }, response.status);
       return response;
     } catch (_) {
@@ -185,27 +192,29 @@
     return nativeFetch(input, init);
   };
 
-  function correctProviderText() {
-    const replacements = [
-      ['Pexels', 'Wikimedia Commons'],
-      ['Jamendo', 'Wikimedia Commons'],
-      ['Pexels stock', 'Commons stock']
-    ];
-    for (const selector of ['#stockStatus', '#musicStatus', '#sceneList']) {
-      const element = document.querySelector(selector);
-      if (!element) continue;
-      let html = element.innerHTML;
-      for (const [from, to] of replacements) html = html.split(from).join(to);
-      if (html !== element.innerHTML) element.innerHTML = html;
+  function replaceText(root) {
+    if (!root) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    for (const node of nodes) {
+      const original = node.nodeValue || '';
+      const updated = original
+        .replaceAll('Pexels stock', 'Commons stock')
+        .replaceAll('Pexels', 'Wikimedia Commons')
+        .replaceAll('Jamendo', 'Wikimedia Commons');
+      if (updated !== original) node.nodeValue = updated;
     }
   }
 
   window.addEventListener('DOMContentLoaded', () => {
-    correctProviderText();
-    const observer = new MutationObserver(correctProviderText);
-    for (const selector of ['#stockStatus', '#musicStatus', '#sceneList']) {
+    const targets = ['#stockStatus', '#musicStatus', '#sceneList'];
+    for (const selector of targets) {
       const element = document.querySelector(selector);
-      if (element) observer.observe(element, { childList: true, subtree: true, characterData: true });
+      if (!element) continue;
+      replaceText(element);
+      const observer = new MutationObserver(() => replaceText(element));
+      observer.observe(element, { childList: true, subtree: true, characterData: true });
     }
   });
 })();
