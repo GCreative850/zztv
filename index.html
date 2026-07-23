@@ -1,1 +1,147 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#08090d"><title>ZZTV Studio</title><link rel="stylesheet" href="/styles.css"></head><body><main class="app"><header class="top"><div class="brand"><div class="logo">ZZ</div><div><h1>ZZTV Studio</h1><div class="small">Faceless Video Factory</div></div></div><div class="status">● LIVE</div></header><section class="panel hero"><div class="eyebrow">AUTOMATED CONTENT ENGINE</div><h2>Script, voice, captions, visuals and finished vertical video.</h2><p>Generate a story, create ElevenLabs narration, add your own clip or photo, and export a ready-to-post video directly from your phone.</p><div class="grid"><div class="field"><label>Niche</label><select id="niche"><option value="mixed">Mixed viral stories</option><option value="sports">Sports stories</option><option value="money">Money & business</option><option value="history">Wild history</option><option value="science">Science mysteries</option></select></div><div class="field"><label>Batch size</label><select id="amount"><option>1</option><option>5</option><option selected>10</option><option>30</option></select></div></div><button class="btn primary" id="generate">Generate Video Queue</button></section><section class="section"><div class="head"><div><div class="eyebrow">CONTENT QUEUE</div><h2>Your Videos</h2></div><span class="count" id="count">0 ready</span></div><div id="queue"></div><button class="btn danger" id="clear" style="margin-top:10px">Clear Queue</button></section><section class="section workspace" id="workspace"><div class="head"><div><div class="eyebrow">VIDEO STUDIO</div><h2 id="topic">Generated Video</h2></div></div><div class="card stack"><div class="field"><label>Edit Voiceover Script</label><textarea id="script"></textarea></div><div class="grid"><div class="field"><label>Voice Style</label><select id="voiceStyle"><option value="documentary">Documentary</option><option value="sports">Sports Energy</option><option value="storyteller">Storyteller</option><option value="business">Business</option><option value="calm">Calm</option><option value="viral">High-Energy Viral</option></select></div><div class="field"><label>Optional Voice ID</label><input id="voiceId" placeholder="Uses default voice"></div></div><div class="statusText" id="voiceStatus">Ready to generate narration.</div><button class="btn primary" id="generateVoice">Generate Human Voice</button><audio id="voiceAudio" controls hidden></audio><a id="downloadAudio" class="download" download="zztv-narration.mp3">Download Narration</a></div><div class="card stack"><div class="eyebrow">VISUALS + MUSIC</div><div class="grid"><div class="field"><label>Background Photo or Video</label><input id="visualUpload" type="file" accept="image/*,video/*"></div><div class="field"><label>Background Music</label><input id="musicUpload" type="file" accept="audio/*"></div></div><div class="field"><label>Music Volume</label><input id="musicVolume" type="range" min="0" max="0.35" step="0.01" value="0.10"></div><video id="backgroundVideo" hidden playsinline muted loop></video><img id="backgroundImage" hidden alt=""><audio id="musicAudio" hidden controls></audio></div><div class="card stack"><div class="eyebrow">VERTICAL PREVIEW</div><div class="previewWrap"><canvas id="canvas" width="720" height="1280"></canvas></div><div class="progress"><div id="renderProgress"></div></div><div class="statusText" id="renderStatus">Preview uses animated ZZTV branding until you upload a visual.</div><div class="row"><button class="btn secondary" id="preview">Preview Captions</button><button class="btn secondary" id="thumbnail">Save Thumbnail</button></div><button class="btn primary" id="renderVideo">Build Finished Video</button><video id="videoResult" hidden controls playsinline></video><a id="downloadVideo" class="download">Download Finished Video</a></div><div class="card"><div class="eyebrow">POST PACKAGE</div><h3 id="title"></h3><div class="value" id="social"></div><button class="btn secondary" id="copy" style="margin-top:12px">Copy Title, Script and Hashtags</button></div></section></main><div class="toast" id="toast"></div><script src="/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#08090d">
+  <title>ZZTV Studio</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <div class="brand">
+        <div class="logo">ZZ</div>
+        <div>
+          <h1>ZZTV Studio</h1>
+          <div class="small">Faceless Video Factory</div>
+        </div>
+      </div>
+      <div class="status">● 1080P</div>
+    </header>
+
+    <section class="panel hero">
+      <div class="eyebrow">AUTOMATED CONTENT ENGINE</div>
+      <h2>Script, human voice, animated captions and finished vertical video.</h2>
+      <p>Generate a story, add several photos or clips, and ZZTV automatically changes scenes, adds cinematic motion, ducks the music and exports a ready-to-post 1080×1920 video.</p>
+      <div class="grid">
+        <div class="field">
+          <label>Niche</label>
+          <select id="niche">
+            <option value="mixed">Mixed viral stories</option>
+            <option value="sports">Sports stories</option>
+            <option value="money">Money &amp; business</option>
+            <option value="history">Wild history</option>
+            <option value="science">Science mysteries</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Batch size</label>
+          <select id="amount">
+            <option>1</option>
+            <option>5</option>
+            <option selected>10</option>
+            <option>30</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn primary" id="generate">Generate Video Queue</button>
+    </section>
+
+    <section class="section">
+      <div class="head">
+        <div>
+          <div class="eyebrow">CONTENT QUEUE</div>
+          <h2>Your Videos</h2>
+        </div>
+        <span class="count" id="count">0 ready</span>
+      </div>
+      <div id="queue"></div>
+      <button class="btn danger" id="clear" style="margin-top:10px">Clear Queue</button>
+    </section>
+
+    <section class="section workspace" id="workspace">
+      <div class="head">
+        <div>
+          <div class="eyebrow">VIDEO STUDIO</div>
+          <h2 id="topic">Generated Video</h2>
+        </div>
+      </div>
+
+      <div class="card stack">
+        <div class="field">
+          <label>Edit Voiceover Script</label>
+          <textarea id="script"></textarea>
+        </div>
+        <div class="grid">
+          <div class="field">
+            <label>Voice Style</label>
+            <select id="voiceStyle">
+              <option value="documentary">Documentary</option>
+              <option value="sports">Sports Energy</option>
+              <option value="storyteller">Storyteller</option>
+              <option value="business">Business</option>
+              <option value="calm">Calm</option>
+              <option value="viral">High-Energy Viral</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Optional Voice ID</label>
+            <input id="voiceId" placeholder="Uses default voice">
+          </div>
+        </div>
+        <div class="statusText" id="voiceStatus">Ready to generate narration.</div>
+        <button class="btn primary" id="generateVoice">Generate Human Voice</button>
+        <audio id="voiceAudio" controls hidden></audio>
+        <a id="downloadAudio" class="download" download="zztv-narration.mp3">Download Narration</a>
+      </div>
+
+      <div class="card stack">
+        <div class="eyebrow">AUTOMATIC SCENES + MUSIC</div>
+        <div class="grid">
+          <div class="field">
+            <label>Photos or Videos — select up to 12</label>
+            <input id="visualUpload" type="file" accept="image/*,video/*" multiple>
+          </div>
+          <div class="field">
+            <label>Background Music</label>
+            <input id="musicUpload" type="file" accept="audio/*">
+          </div>
+        </div>
+        <div class="statusText" id="visualStatus">No visuals loaded. ZZTV branded motion background will be used.</div>
+        <div class="field">
+          <label>Music Volume — automatically ducks under speech</label>
+          <input id="musicVolume" type="range" min="0" max="0.35" step="0.01" value="0.10">
+        </div>
+        <audio id="musicAudio" hidden controls></audio>
+      </div>
+
+      <div class="card stack">
+        <div class="eyebrow">1080×1920 VERTICAL PREVIEW</div>
+        <div class="previewWrap">
+          <canvas id="canvas" width="1080" height="1920"></canvas>
+        </div>
+        <div class="progress"><div id="renderProgress"></div></div>
+        <div class="statusText" id="renderStatus">Word highlights, cinematic scene motion, intro and outro are enabled.</div>
+        <div class="row">
+          <button class="btn secondary" id="preview">Preview Captions</button>
+          <button class="btn secondary" id="thumbnail">Save Thumbnail</button>
+        </div>
+        <button class="btn primary" id="renderVideo">Build Finished Video</button>
+        <video id="videoResult" hidden controls playsinline></video>
+        <a id="downloadVideo" class="download">Download Finished Video</a>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow">POST PACKAGE</div>
+        <h3 id="title"></h3>
+        <div class="value" id="social"></div>
+        <button class="btn secondary" id="copy" style="margin-top:12px">Copy Title, Script and Hashtags</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
