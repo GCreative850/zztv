@@ -2,6 +2,14 @@ import { randomBytes, createHash, createCipheriv, createDecipheriv } from 'crypt
 
 const MAX_SINGLE_UPLOAD = 64 * 1024 * 1024;
 
+function envValue(name) {
+  const value = String(process.env[name] || '').trim();
+  if (value.length >= 2 && ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))) {
+    return value.slice(1, -1).trim();
+  }
+  return value;
+}
+
 function cookieValue(req, name) {
   const header = String(req.headers.cookie || '');
   const part = header.split(';').map((item) => item.trim()).find((item) => item.startsWith(`${name}=`));
@@ -9,7 +17,7 @@ function cookieValue(req, name) {
 }
 
 function secretKey() {
-  const secret = process.env.TIKTOK_SESSION_SECRET || process.env.TIKTOK_CLIENT_SECRET || '';
+  const secret = envValue('TIKTOK_SESSION_SECRET') || envValue('TIKTOK_CLIENT_SECRET');
   if (!secret) throw new Error('TikTok session secret is missing.');
   return createHash('sha256').update(secret).digest();
 }
@@ -38,7 +46,7 @@ function openSession(token) {
 }
 
 function redirectUri(req) {
-  return process.env.TIKTOK_REDIRECT_URI || `https://${req.headers.host}/api/tiktok/callback`;
+  return envValue('TIKTOK_REDIRECT_URI') || `https://${req.headers.host}/api/tiktok/callback`;
 }
 
 function parseBody(req) {
@@ -59,7 +67,7 @@ function requireSession(req, res) {
 
 async function start(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-  const clientKey = process.env.TIKTOK_CLIENT_KEY;
+  const clientKey = envValue('TIKTOK_CLIENT_KEY');
   if (!clientKey) return res.status(500).send('TIKTOK_CLIENT_KEY is missing in Vercel.');
   const state = randomBytes(24).toString('hex');
   res.setHeader('Set-Cookie', `zztv_tiktok_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`);
@@ -75,8 +83,8 @@ async function start(req, res) {
 
 async function callback(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-  const clientKey = process.env.TIKTOK_CLIENT_KEY;
-  const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
+  const clientKey = envValue('TIKTOK_CLIENT_KEY');
+  const clientSecret = envValue('TIKTOK_CLIENT_SECRET');
   if (!clientKey || !clientSecret) return res.status(500).send('TikTok credentials are missing in Vercel.');
 
   const code = String(req.query.code || '');
@@ -120,7 +128,7 @@ async function callback(req, res) {
 
 async function status(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-  const configured = Boolean(process.env.TIKTOK_CLIENT_KEY && process.env.TIKTOK_CLIENT_SECRET);
+  const configured = Boolean(envValue('TIKTOK_CLIENT_KEY') && envValue('TIKTOK_CLIENT_SECRET'));
   const session = openSession(cookieValue(req, 'zztv_tiktok'));
   if (!session?.access_token) return res.status(200).json({ connected: false, configured });
   try {
